@@ -1,0 +1,173 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="build-windows">
+      <UniqueIdentifier>{393f6d50-c955-4ea3-a282-938de3538f5b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{09361d51-6f51-4fcc-9d4e-3fc5b442868a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source">
+      <UniqueIdentifier>{0329a30c-7c7c-4e2e-a781-e140d8a36373}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty">
+      <UniqueIdentifier>{853531b2-552e-46e6-ad8d-96cc329371cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\VulkanMemoryAllocator">
+      <UniqueIdentifier>{62ee1b08-4b6a-4acf-8f7f-c47ece3c6c21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\VulkanMemoryAllocator\include">
+      <UniqueIdentifier>{79367d5a-51bd-4529-9105-e8edc77eef99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\Vulkan-Headers">
+      <UniqueIdentifier>{5a6422f2-4b91-4996-8736-56520c40439f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\Vulkan-Headers\include">
+      <UniqueIdentifier>{6fdd48af-6c88-4ee1-ad0b-9e04bd4fb069}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\Vulkan-Headers\include\vulkan">
+      <UniqueIdentifier>{bf084103-f0b9-4b6c-a373-c1cf3e3a78b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\D3D12MemoryAllocator">
+      <UniqueIdentifier>{8d3c1fa3-a6ef-4aa3-a4f1-22f7a6904a8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\D3D12MemoryAllocator\include">
+      <UniqueIdentifier>{6f6028c1-adba-45ff-9ba4-f1d50cb40e58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\D3D12MemoryAllocator\src">
+      <UniqueIdentifier>{995a3498-14af-46ca-86d8-077752742dd2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>build-windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_command_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_descriptor.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_device.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_fence.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_frame_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_image.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_pipeline.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_queue.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_render_pass.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_sampler.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_swap_chain.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_vk_vma.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_swap_chain.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_command_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_descriptor.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_descriptor_allocator.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_device.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_fence.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_frame_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_image.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_pipeline.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_queue.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_render_pass.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_sampler.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_d3d12_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_pal_device.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp">
+      <Filter>thirdparty\D3D12MemoryAllocator\src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BRX-PAL.def">
+      <Filter>build-windows</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\brx_pal_device.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\brx_pal_vk_device.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\VulkanMemoryAllocator\include\vk_mem_alloc.h">
+      <Filter>thirdparty\VulkanMemoryAllocator\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\Vulkan-Headers\include\vulkan\vk_platform.h">
+      <Filter>thirdparty\Vulkan-Headers\include\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\Vulkan-Headers\include\vulkan\vulkan.h">
+      <Filter>thirdparty\Vulkan-Headers\include\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\Vulkan-Headers\include\vulkan\vulkan_android.h">
+      <Filter>thirdparty\Vulkan-Headers\include\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\Vulkan-Headers\include\vulkan\vulkan_core.h">
+      <Filter>thirdparty\Vulkan-Headers\include\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\Vulkan-Headers\include\vulkan\vulkan_win32.h">
+      <Filter>thirdparty\Vulkan-Headers\include\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\brx_pal_sampled_asset_image_format.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\brx_pal_d3d12_descriptor_allocator.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\brx_pal_d3d12_device.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\D3D12MemoryAllocator\include\D3D12MemAlloc.h">
+      <Filter>thirdparty\D3D12MemoryAllocator\include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
