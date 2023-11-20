@@ -1,0 +1,3 @@
+EXPORTS
+	brx_pal_create_device
+	brx_pal_destroy_device
