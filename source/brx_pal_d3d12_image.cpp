@@ -537,7 +537,7 @@ void brx_pal_d3d12_sampled_asset_image::init(bool uma, D3D12MA::Allocator *memor
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_NONE};
 
-	HRESULT hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, (!uma) ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
+	HRESULT hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
 	assert(SUCCEEDED(hr_create_resource));
 
 	this->m_shader_resource_view_desc = D3D12_SHADER_RESOURCE_VIEW_DESC{
@@ -584,9 +584,4 @@ D3D12_SHADER_RESOURCE_VIEW_DESC const *brx_pal_d3d12_sampled_asset_image::get_sh
 brx_pal_sampled_image const *brx_pal_d3d12_sampled_asset_image::get_sampled_image() const
 {
 	return static_cast<brx_pal_d3d12_sampled_image const *>(this);
-}
-
-uint32_t brx_pal_d3d12_sampled_asset_image::get_mip_levels() const
-{
-	return this->m_mip_levels;
 }

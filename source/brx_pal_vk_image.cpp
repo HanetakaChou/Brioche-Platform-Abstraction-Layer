@@ -632,8 +632,3 @@ brx_pal_sampled_image const *brx_pal_vk_sampled_asset_image::get_sampled_image()
 {
 	return static_cast<brx_pal_vk_sampled_image const *>(this);
 }
-
-uint32_t brx_pal_vk_sampled_asset_image::get_mip_levels() const
-{
-	return this->m_mip_levels;
-}

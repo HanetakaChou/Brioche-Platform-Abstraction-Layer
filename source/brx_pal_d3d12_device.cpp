@@ -1188,6 +1188,9 @@ brx_pal_sampled_asset_image *brx_pal_d3d12_device::create_sampled_asset_image(BR
     DXGI_FORMAT unwrapped_sampled_asset_image_format;
     switch (wrapped_sampled_asset_image_format)
     {
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8_UNORM:
+        unwrapped_sampled_asset_image_format = DXGI_FORMAT_R8_UNORM;
+        break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8G8B8A8_UNORM:
         unwrapped_sampled_asset_image_format = DXGI_FORMAT_R8G8B8A8_UNORM;
         break;
