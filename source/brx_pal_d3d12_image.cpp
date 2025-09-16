@@ -510,14 +510,12 @@ brx_pal_sampled_image const *brx_pal_d3d12_storage_intermediate_image::get_sampl
 	return static_cast<brx_pal_d3d12_sampled_image const *>(this);
 }
 
-brx_pal_d3d12_sampled_asset_image::brx_pal_d3d12_sampled_asset_image() : m_resource(NULL), m_allocation(NULL), m_mip_levels(static_cast<uint32_t>(-1))
+brx_pal_d3d12_sampled_asset_image::brx_pal_d3d12_sampled_asset_image() : m_resource(NULL), m_allocation(NULL), m_mip_levels(static_cast<uint32_t>(-1)), m_array_layers(static_cast<uint32_t>(-1))
 {
 }
 
-void brx_pal_d3d12_sampled_asset_image::init(bool uma, D3D12MA::Allocator *memory_allocator, D3D12MA::Pool *sampled_asset_image_memory_pool, DXGI_FORMAT unwrapped_sampled_asset_image_format, uint32_t width, uint32_t height, uint32_t unwrapped_mip_levels)
+void brx_pal_d3d12_sampled_asset_image::init(bool uma, D3D12MA::Allocator *memory_allocator, D3D12MA::Pool *sampled_asset_image_memory_pool, DXGI_FORMAT unwrapped_sampled_asset_image_format, uint32_t width, uint32_t height, bool array, uint32_t array_layers, uint32_t mip_levels)
 {
-	uint16_t const wrapped_mip_levels = static_cast<uint16_t>(unwrapped_mip_levels);
-
 	D3D12MA::ALLOCATION_DESC allocation_desc = {
 		D3D12MA::ALLOCATION_FLAG_NONE,
 		D3D12_HEAP_TYPE_CUSTOM,
@@ -525,33 +523,63 @@ void brx_pal_d3d12_sampled_asset_image::init(bool uma, D3D12MA::Allocator *memor
 		sampled_asset_image_memory_pool,
 		NULL};
 
-	D3D12_RESOURCE_DESC resource_desc = {
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		width,
-		height,
-		1U,
-		wrapped_mip_levels,
-		unwrapped_sampled_asset_image_format,
-		{1U, 0U},
-		D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		D3D12_RESOURCE_FLAG_NONE};
+	D3D12_RESOURCE_DESC resource_desc;
+	resource_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	resource_desc.Width = width;
+	resource_desc.Height = height;
+	resource_desc.MipLevels = static_cast<uint16_t>(mip_levels);
+	resource_desc.Format = unwrapped_sampled_asset_image_format;
+	resource_desc.SampleDesc.Count = 1U;
+	resource_desc.SampleDesc.Quality = 0U;
+	resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	if (!array)
+	{
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resource_desc.DepthOrArraySize = 1U;
+	}
+	else
+	{
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resource_desc.DepthOrArraySize = array_layers;
+	}
 
-	HRESULT hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, (!uma) ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
+	HRESULT hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
 	assert(SUCCEEDED(hr_create_resource));
 
-	this->m_shader_resource_view_desc = D3D12_SHADER_RESOURCE_VIEW_DESC{
-		.Format = unwrapped_sampled_asset_image_format,
-		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2D = {
-			0U,
-			wrapped_mip_levels,
-			0U,
-			0.0F}};
+	this->m_shader_resource_view_desc.Format = unwrapped_sampled_asset_image_format;
+	this->m_shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	if (!array)
+	{
+		this->m_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		this->m_shader_resource_view_desc.Texture2D.MostDetailedMip = 0U;
+		this->m_shader_resource_view_desc.Texture2D.MipLevels = mip_levels;
+		this->m_shader_resource_view_desc.Texture2D.PlaneSlice = 0U;
+		this->m_shader_resource_view_desc.Texture2D.ResourceMinLODClamp = 0.0F;
+	}
+	else
+	{
+		this->m_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+		this->m_shader_resource_view_desc.Texture2DArray.MostDetailedMip = 0U;
+		this->m_shader_resource_view_desc.Texture2DArray.MipLevels = mip_levels;
+		this->m_shader_resource_view_desc.Texture2DArray.FirstArraySlice = 0U;
+		this->m_shader_resource_view_desc.Texture2DArray.ArraySize = array_layers;
+		this->m_shader_resource_view_desc.Texture2DArray.PlaneSlice = 0U;
+		this->m_shader_resource_view_desc.Texture2DArray.ResourceMinLODClamp = 0.0F;
+	}
 
 	assert(static_cast<uint32_t>(-1) == this->m_mip_levels);
-	this->m_mip_levels = wrapped_mip_levels;
+	this->m_mip_levels = mip_levels;
+
+	assert(static_cast<uint32_t>(-1) == this->m_array_layers);
+	if (!array)
+	{
+		this->m_array_layers = 1U;
+	}
+	else
+	{
+		this->m_array_layers = array_layers;
+	}
 }
 
 void brx_pal_d3d12_sampled_asset_image::uninit()
@@ -576,6 +604,16 @@ ID3D12Resource *brx_pal_d3d12_sampled_asset_image::get_resource() const
 	return this->m_resource;
 }
 
+uint32_t brx_pal_d3d12_sampled_asset_image::get_mip_levels() const
+{
+	return this->m_mip_levels;
+}
+
+uint32_t brx_pal_d3d12_sampled_asset_image::get_array_layers() const
+{
+	return this->m_array_layers;
+}
+
 D3D12_SHADER_RESOURCE_VIEW_DESC const *brx_pal_d3d12_sampled_asset_image::get_shader_resource_view_desc() const
 {
 	return &this->m_shader_resource_view_desc;
@@ -584,9 +622,4 @@ D3D12_SHADER_RESOURCE_VIEW_DESC const *brx_pal_d3d12_sampled_asset_image::get_sh
 brx_pal_sampled_image const *brx_pal_d3d12_sampled_asset_image::get_sampled_image() const
 {
 	return static_cast<brx_pal_d3d12_sampled_image const *>(this);
-}
-
-uint32_t brx_pal_d3d12_sampled_asset_image::get_mip_levels() const
-{
-	return this->m_mip_levels;
 }

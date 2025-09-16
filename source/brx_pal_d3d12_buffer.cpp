@@ -43,7 +43,7 @@ void brx_pal_d3d12_uniform_upload_buffer::init(D3D12MA::Allocator *memory_alloca
         D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
         D3D12_RESOURCE_FLAG_NONE};
 
-    HRESULT const hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, D3D12_RESOURCE_STATE_COPY_SOURCE, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
+    HRESULT const hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
     assert(SUCCEEDED(hr_create_resource));
 
     assert(NULL == this->m_host_memory_range_base);
@@ -273,7 +273,7 @@ void brx_pal_d3d12_storage_asset_buffer::init(bool uma, D3D12MA::Allocator *memo
         D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
         D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS};
 
-    HRESULT hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, (!uma) ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
+    HRESULT hr_create_resource = memory_allocator->CreateResource(&allocation_desc, &resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, &this->m_allocation, IID_PPV_ARGS(&this->m_resource));
     assert(SUCCEEDED(hr_create_resource));
 
     this->m_shader_resource_view_desc = D3D12_SHADER_RESOURCE_VIEW_DESC{

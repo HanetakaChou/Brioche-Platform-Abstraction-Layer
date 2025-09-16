@@ -202,6 +202,27 @@ void brx_pal_vk_graphics_command_buffer::begin()
     assert(VK_SUCCESS == res_begin_command_buffer);
 }
 
+void brx_pal_vk_graphics_command_buffer::end()
+{
+    VkResult res_end_command_buffer = this->m_pfn_end_command_buffer(this->m_command_buffer);
+    assert(VK_SUCCESS == res_end_command_buffer);
+}
+
+void brx_pal_vk_graphics_command_buffer::begin_debug_utils_label(char const *label_name)
+{
+#ifndef NDEBUG
+    VkDebugUtilsLabelEXT debug_utils_label = {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, NULL, label_name, {1.0F, 1.0F, 1.0F, 1.0F}};
+    this->m_pfn_cmd_begin_debug_utils_label(this->m_command_buffer, &debug_utils_label);
+#endif
+}
+
+void brx_pal_vk_graphics_command_buffer::end_debug_utils_label()
+{
+#ifndef NDEBUG
+    this->m_pfn_cmd_end_debug_utils_label(this->m_command_buffer);
+#endif
+}
+
 void brx_pal_vk_graphics_command_buffer::acquire(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *wrapped_compacted_bottom_level_acceleration_structures)
 {
     if (this->m_has_dedicated_upload_queue)
@@ -232,9 +253,9 @@ void brx_pal_vk_graphics_command_buffer::acquire(uint32_t storage_asset_buffer_c
 
             for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
             {
-                VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_sampled_asset_images)->get_image();
+                VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_sampled_asset_image)->get_image();
 
-                VkImageSubresourceRange const sampled_asset_image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_mip_level, 1U, 0U, 1U};
+                VkImageSubresourceRange const sampled_asset_image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_mip_level, 1U, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_array_layer, 1U};
 
                 image_acquire_barriers[sampled_asset_image_subresource_index] =
                     VkImageMemoryBarrier{
@@ -295,21 +316,6 @@ void brx_pal_vk_graphics_command_buffer::acquire(uint32_t storage_asset_buffer_c
     }
 }
 
-void brx_pal_vk_graphics_command_buffer::begin_debug_utils_label(char const *label_name)
-{
-#ifndef NDEBUG
-    VkDebugUtilsLabelEXT debug_utils_label = {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, NULL, label_name, {1.0F, 1.0F, 1.0F, 1.0F}};
-    this->m_pfn_cmd_begin_debug_utils_label(this->m_command_buffer, &debug_utils_label);
-#endif
-}
-
-void brx_pal_vk_graphics_command_buffer::end_debug_utils_label()
-{
-#ifndef NDEBUG
-    this->m_pfn_cmd_end_debug_utils_label(this->m_command_buffer);
-#endif
-}
-
 void brx_pal_vk_graphics_command_buffer::begin_render_pass(brx_pal_render_pass const *brx_pal_render_pass, brx_pal_frame_buffer const *brx_pal_frame_buffer, uint32_t width, uint32_t height, uint32_t color_clear_value_count, float const (*color_clear_values)[4], float const *depth_clear_value, uint8_t const *stencil_clear_value)
 {
     assert(NULL != brx_pal_render_pass);
@@ -352,83 +358,9 @@ void brx_pal_vk_graphics_command_buffer::begin_render_pass(brx_pal_render_pass c
     this->m_pfn_cmd_begin_render_pass(this->m_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void brx_pal_vk_graphics_command_buffer::bind_graphics_pipeline(brx_pal_graphics_pipeline const *wrapped_graphics_pipeline)
-{
-    assert(NULL != wrapped_graphics_pipeline);
-    VkPipeline const graphics_pipeline = static_cast<brx_pal_vk_graphics_pipeline const *>(wrapped_graphics_pipeline)->get_pipeline();
-
-    this->m_pfn_cmd_bind_pipeline(this->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-}
-
-void brx_pal_vk_graphics_command_buffer::set_view_port(uint32_t width, uint32_t height)
-{
-    // Vulkan Flip Y
-    float const view_port_y = static_cast<float>(height);
-    float const view_port_height = -static_cast<float>(height);
-
-    VkViewport const view_port = {0.0F, view_port_y, static_cast<float>(width), view_port_height, 0.0F, 1.0F};
-    this->m_pfn_cmd_set_view_port(this->m_command_buffer, 0U, 1U, &view_port);
-}
-
-void brx_pal_vk_graphics_command_buffer::set_scissor(int32_t offset_width, int32_t offset_height, uint32_t width, uint32_t height)
-{
-    VkRect2D const scissor = {{offset_width, offset_height}, {width, height}};
-    this->m_pfn_cmd_set_scissor(this->m_command_buffer, 0U, 1U, &scissor);
-}
-
-void brx_pal_vk_graphics_command_buffer::bind_graphics_descriptor_sets(brx_pal_pipeline_layout const *wrapped_pipeline_layout, uint32_t descriptor_set_count, brx_pal_descriptor_set const *const *wrapped_descriptor_sets, uint32_t dynamic_offet_count, uint32_t const *dynamic_offsets)
-{
-    assert(NULL != wrapped_pipeline_layout);
-    assert(NULL != wrapped_descriptor_sets);
-    VkPipelineLayout const pipeline_layout = static_cast<brx_pal_vk_pipeline_layout const *>(wrapped_pipeline_layout)->get_pipeline_layout();
-
-    mcrt_vector<VkDescriptorSet> descriptor_sets(static_cast<size_t>(descriptor_set_count));
-    for (uint32_t descriptor_set_index = 0U; descriptor_set_index < descriptor_set_count; ++descriptor_set_index)
-    {
-        assert(NULL != wrapped_descriptor_sets[descriptor_set_index]);
-        descriptor_sets[descriptor_set_index] = static_cast<brx_pal_vk_descriptor_set const *>(wrapped_descriptor_sets[descriptor_set_index])->get_descriptor_set();
-    }
-
-    this->m_pfn_cmd_bind_descriptor_sets(this->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0U, descriptor_set_count, &descriptor_sets[0], dynamic_offet_count, dynamic_offsets);
-}
-
-void brx_pal_vk_graphics_command_buffer::draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance)
-{
-    this->m_pfn_cmd_draw(this->m_command_buffer, vertex_count, instance_count, first_vertex, first_instance);
-}
-
 void brx_pal_vk_graphics_command_buffer::end_render_pass()
 {
     this->m_pfn_cmd_end_render_pass(this->m_command_buffer);
-}
-
-void brx_pal_vk_graphics_command_buffer::bind_compute_pipeline(brx_pal_compute_pipeline const *wrapped_compute_pipeline)
-{
-    assert(NULL != wrapped_compute_pipeline);
-    VkPipeline const compute_pipeline = static_cast<brx_pal_vk_compute_pipeline const *>(wrapped_compute_pipeline)->get_pipeline();
-
-    this->m_pfn_cmd_bind_pipeline(this->m_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
-}
-
-void brx_pal_vk_graphics_command_buffer::bind_compute_descriptor_sets(brx_pal_pipeline_layout const *wrapped_pipeline_layout, uint32_t descriptor_set_count, brx_pal_descriptor_set const *const *wrapped_descriptor_sets, uint32_t dynamic_offet_count, uint32_t const *dynamic_offsets)
-{
-    assert(NULL != wrapped_pipeline_layout);
-    assert(NULL != wrapped_descriptor_sets);
-    VkPipelineLayout const pipeline_layout = static_cast<brx_pal_vk_pipeline_layout const *>(wrapped_pipeline_layout)->get_pipeline_layout();
-
-    mcrt_vector<VkDescriptorSet> descriptor_sets(static_cast<size_t>(descriptor_set_count));
-    for (uint32_t descriptor_set_index = 0U; descriptor_set_index < descriptor_set_count; ++descriptor_set_index)
-    {
-        assert(NULL != wrapped_descriptor_sets[descriptor_set_index]);
-        descriptor_sets[descriptor_set_index] = static_cast<brx_pal_vk_descriptor_set const *>(wrapped_descriptor_sets[descriptor_set_index])->get_descriptor_set();
-    }
-
-    this->m_pfn_cmd_bind_descriptor_sets(this->m_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0U, descriptor_set_count, &descriptor_sets[0], dynamic_offet_count, dynamic_offsets);
-}
-
-void brx_pal_vk_graphics_command_buffer::dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z)
-{
-    this->m_pfn_cmd_dispatch(this->m_command_buffer, group_count_x, group_count_y, group_count_z);
 }
 
 void brx_pal_vk_graphics_command_buffer::storage_resource_load_dont_care(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
@@ -615,6 +547,80 @@ void brx_pal_vk_graphics_command_buffer::storage_resource_store(uint32_t storage
     VkPipelineStageFlags const graphics_queue_family_store_destination_stage = (!this->m_support_ray_tracing) ? (g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages) : (g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages | g_graphics_queue_family_ray_tracing_pipeline_shader_read_stages | g_graphics_queue_family_acceleration_structure_build_shader_read_stages);
 
     this->m_pfn_cmd_pipeline_barrier(this->m_command_buffer, g_graphics_queue_family_graphics_compute_pipeline_shader_write_stages, graphics_queue_family_store_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(buffer_store_barriers.size()), buffer_store_barriers.data(), static_cast<uint32_t>(image_store_barriers.size()), image_store_barriers.data());
+}
+
+void brx_pal_vk_graphics_command_buffer::bind_graphics_pipeline(brx_pal_graphics_pipeline const *wrapped_graphics_pipeline)
+{
+    assert(NULL != wrapped_graphics_pipeline);
+    VkPipeline const graphics_pipeline = static_cast<brx_pal_vk_graphics_pipeline const *>(wrapped_graphics_pipeline)->get_pipeline();
+
+    this->m_pfn_cmd_bind_pipeline(this->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+}
+
+void brx_pal_vk_graphics_command_buffer::set_view_port(uint32_t width, uint32_t height)
+{
+    // Vulkan Flip Y
+    float const view_port_y = static_cast<float>(height);
+    float const view_port_height = -static_cast<float>(height);
+
+    VkViewport const view_port = {0.0F, view_port_y, static_cast<float>(width), view_port_height, 0.0F, 1.0F};
+    this->m_pfn_cmd_set_view_port(this->m_command_buffer, 0U, 1U, &view_port);
+}
+
+void brx_pal_vk_graphics_command_buffer::set_scissor(int32_t offset_width, int32_t offset_height, uint32_t width, uint32_t height)
+{
+    VkRect2D const scissor = {{offset_width, offset_height}, {width, height}};
+    this->m_pfn_cmd_set_scissor(this->m_command_buffer, 0U, 1U, &scissor);
+}
+
+void brx_pal_vk_graphics_command_buffer::bind_graphics_descriptor_sets(brx_pal_pipeline_layout const *wrapped_pipeline_layout, uint32_t descriptor_set_count, brx_pal_descriptor_set const *const *wrapped_descriptor_sets, uint32_t dynamic_offet_count, uint32_t const *dynamic_offsets)
+{
+    assert(NULL != wrapped_pipeline_layout);
+    assert(NULL != wrapped_descriptor_sets);
+    VkPipelineLayout const pipeline_layout = static_cast<brx_pal_vk_pipeline_layout const *>(wrapped_pipeline_layout)->get_pipeline_layout();
+
+    mcrt_vector<VkDescriptorSet> descriptor_sets(static_cast<size_t>(descriptor_set_count));
+    for (uint32_t descriptor_set_index = 0U; descriptor_set_index < descriptor_set_count; ++descriptor_set_index)
+    {
+        assert(NULL != wrapped_descriptor_sets[descriptor_set_index]);
+        descriptor_sets[descriptor_set_index] = static_cast<brx_pal_vk_descriptor_set const *>(wrapped_descriptor_sets[descriptor_set_index])->get_descriptor_set();
+    }
+
+    this->m_pfn_cmd_bind_descriptor_sets(this->m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0U, descriptor_set_count, &descriptor_sets[0], dynamic_offet_count, dynamic_offsets);
+}
+
+void brx_pal_vk_graphics_command_buffer::draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance)
+{
+    this->m_pfn_cmd_draw(this->m_command_buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+void brx_pal_vk_graphics_command_buffer::bind_compute_pipeline(brx_pal_compute_pipeline const *wrapped_compute_pipeline)
+{
+    assert(NULL != wrapped_compute_pipeline);
+    VkPipeline const compute_pipeline = static_cast<brx_pal_vk_compute_pipeline const *>(wrapped_compute_pipeline)->get_pipeline();
+
+    this->m_pfn_cmd_bind_pipeline(this->m_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
+}
+
+void brx_pal_vk_graphics_command_buffer::bind_compute_descriptor_sets(brx_pal_pipeline_layout const *wrapped_pipeline_layout, uint32_t descriptor_set_count, brx_pal_descriptor_set const *const *wrapped_descriptor_sets, uint32_t dynamic_offet_count, uint32_t const *dynamic_offsets)
+{
+    assert(NULL != wrapped_pipeline_layout);
+    assert(NULL != wrapped_descriptor_sets);
+    VkPipelineLayout const pipeline_layout = static_cast<brx_pal_vk_pipeline_layout const *>(wrapped_pipeline_layout)->get_pipeline_layout();
+
+    mcrt_vector<VkDescriptorSet> descriptor_sets(static_cast<size_t>(descriptor_set_count));
+    for (uint32_t descriptor_set_index = 0U; descriptor_set_index < descriptor_set_count; ++descriptor_set_index)
+    {
+        assert(NULL != wrapped_descriptor_sets[descriptor_set_index]);
+        descriptor_sets[descriptor_set_index] = static_cast<brx_pal_vk_descriptor_set const *>(wrapped_descriptor_sets[descriptor_set_index])->get_descriptor_set();
+    }
+
+    this->m_pfn_cmd_bind_descriptor_sets(this->m_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0U, descriptor_set_count, &descriptor_sets[0], dynamic_offet_count, dynamic_offsets);
+}
+
+void brx_pal_vk_graphics_command_buffer::dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z)
+{
+    this->m_pfn_cmd_dispatch(this->m_command_buffer, group_count_x, group_count_y, group_count_z);
 }
 
 void brx_pal_vk_graphics_command_buffer::build_intermediate_bottom_level_acceleration_structure(brx_pal_intermediate_bottom_level_acceleration_structure *wrapped_intermediate_bottom_level_acceleration_structure, uint32_t bottom_level_acceleration_structure_geometry_count, BRX_PAL_BOTTOM_LEVEL_ACCELERATION_STRUCTURE_GEOMETRY const *wrapped_bottom_level_acceleration_structure_geometries, brx_pal_scratch_buffer *wrapped_scratch_buffer)
@@ -1001,12 +1007,6 @@ void brx_pal_vk_graphics_command_buffer::update_top_level_acceleration_structure
     this->m_pfn_cmd_pipeline_barrier(this->m_command_buffer, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages | g_graphics_queue_family_ray_tracing_pipeline_shader_read_stages, 0U, 0U, NULL, 1U, &release_barrier, 0U, NULL);
 }
 
-void brx_pal_vk_graphics_command_buffer::end()
-{
-    VkResult res_end_command_buffer = this->m_pfn_end_command_buffer(this->m_command_buffer);
-    assert(VK_SUCCESS == res_end_command_buffer);
-}
-
 brx_pal_vk_upload_command_buffer::brx_pal_vk_upload_command_buffer()
     : m_graphics_command_pool(VK_NULL_HANDLE),
       m_graphics_command_buffer(VK_NULL_HANDLE),
@@ -1276,6 +1276,96 @@ void brx_pal_vk_upload_command_buffer::begin()
     }
 }
 
+void brx_pal_vk_upload_command_buffer::end()
+{
+    if (this->m_has_dedicated_upload_queue)
+    {
+        if (this->m_upload_queue_family_index != this->m_graphics_queue_family_index)
+        {
+            assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
+            VkResult res_end_upload_command_buffer = this->m_pfn_end_command_buffer(this->m_upload_command_buffer);
+            assert(VK_SUCCESS == res_end_upload_command_buffer);
+        }
+        else
+        {
+            assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
+            VkResult res_end_upload_command_buffer = this->m_pfn_end_command_buffer(this->m_upload_command_buffer);
+            assert(VK_SUCCESS == res_end_upload_command_buffer);
+        }
+    }
+    else
+    {
+        assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
+
+        VkResult res_end_graphics_command_buffer = this->m_pfn_end_command_buffer(this->m_graphics_command_buffer);
+        assert(VK_SUCCESS == res_end_graphics_command_buffer);
+    }
+}
+
+void brx_pal_vk_upload_command_buffer::asset_resource_load_dont_care(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources)
+{
+    // NOTE: we do NOT need to care "load" barriers for the buffers, since we do not read the buffers and there is no "layout" transitions for the buffers
+
+    if (sampled_asset_image_subresource_count > 0U)
+    {
+        mcrt_vector<VkImageMemoryBarrier> image_load_barriers(static_cast<size_t>(sampled_asset_image_subresource_count));
+
+        for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
+        {
+            VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_sampled_asset_image)->get_image();
+
+            VkImageSubresourceRange const sampled_asset_image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_mip_level, 1U, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_array_layer, 1U};
+
+            image_load_barriers[sampled_asset_image_subresource_index] = VkImageMemoryBarrier{
+                VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                NULL,
+                0U,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_QUEUE_FAMILY_IGNORED,
+                VK_QUEUE_FAMILY_IGNORED,
+                sampled_asset_image,
+                sampled_asset_image_subresource_range};
+        }
+
+        VkPipelineStageFlags const load_source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+        VkPipelineStageFlags const load_destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+        assert(!image_load_barriers.empty());
+
+        if (this->m_has_dedicated_upload_queue)
+        {
+            if (this->m_upload_queue_family_index != this->m_graphics_queue_family_index)
+            {
+                assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
+                this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, 0U, NULL, image_load_barriers.size(), image_load_barriers.data());
+            }
+            else
+            {
+                assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
+                this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, 0U, NULL, image_load_barriers.size(), image_load_barriers.data());
+            }
+        }
+        else
+        {
+            assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
+
+            this->m_pfn_cmd_pipeline_barrier(this->m_graphics_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, 0U, NULL, image_load_barriers.size(), image_load_barriers.data());
+        }
+    }
+}
+
+void brx_pal_vk_upload_command_buffer::asset_resource_store(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffer, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources)
+{
+    // NOTE: the "release" handle the synchronization
+}
+
 void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_storage_asset_buffer(brx_pal_storage_asset_buffer *wrapped_storage_asset_buffer, uint64_t dst_offset, brx_pal_staging_upload_buffer *wrapped_staging_upload_buffer, uint64_t src_offset, uint32_t src_size)
 {
     assert(NULL != wrapped_storage_asset_buffer);
@@ -1309,10 +1399,14 @@ void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_stor
     }
 }
 
-void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_sampled_asset_image(brx_pal_sampled_asset_image *wrapped_sampled_asset_image, BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT wrapped_sampled_asset_image_format, uint32_t sampled_asset_image_width, uint32_t sampled_asset_image_height, uint32_t dst_mip_level, brx_pal_staging_upload_buffer *wrapped_staging_upload_buffer, uint64_t src_offset, uint32_t src_row_pitch, uint32_t src_row_count)
+void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresource, BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT wrapped_sampled_asset_image_format, uint32_t sampled_asset_image_zeroth_width, uint32_t sampled_asset_image_zeroth_height, brx_pal_staging_upload_buffer *wrapped_staging_upload_buffer, uint64_t src_offset, uint32_t src_row_pitch, uint32_t src_row_count)
 {
-    assert(NULL != wrapped_sampled_asset_image);
-    VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image *>(wrapped_sampled_asset_image)->get_image();
+    assert(NULL != wrapped_sampled_asset_image_subresource);
+    assert(NULL != wrapped_sampled_asset_image_subresource->m_sampled_asset_image);
+    VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image const *>(wrapped_sampled_asset_image_subresource->m_sampled_asset_image)->get_image();
+
+    uint32_t const destination_mip_level = wrapped_sampled_asset_image_subresource->m_mip_level;
+    uint32_t const destination_array_layer = wrapped_sampled_asset_image_subresource->m_array_layer;
 
     assert(NULL != wrapped_staging_upload_buffer);
     VkBuffer const staging_upload_buffer = static_cast<brx_pal_vk_staging_upload_buffer *>(wrapped_staging_upload_buffer)->get_buffer();
@@ -1325,36 +1419,10 @@ void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_samp
     uint32_t const buffer_row_length = (src_row_pitch / block_size) * block_width;
     uint32_t const buffer_image_height = src_row_count * block_height;
 
-    uint32_t image_width = (sampled_asset_image_width >> dst_mip_level);
-    uint32_t image_height = (sampled_asset_image_height >> dst_mip_level);
-    if (0U == image_width)
-    {
-        image_width = 1U;
-    }
-    if (0U == image_height)
-    {
-        image_height = 1U;
-    }
+    uint32_t image_mip_level_width = std::max(1U, (sampled_asset_image_zeroth_width >> destination_mip_level));
+    uint32_t image_mip_level_height = std::max(1U, (sampled_asset_image_zeroth_height >> destination_mip_level));
 
-    VkBufferImageCopy const region = {src_offset, buffer_row_length, buffer_image_height, {VK_IMAGE_ASPECT_COLOR_BIT, dst_mip_level, 0U, 1U}, {0U, 0U, 0U}, {image_width, image_height, 1U}};
-
-    VkImageSubresourceRange const sampled_asset_image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, dst_mip_level, 1U, 0U, 1U};
-
-    VkImageMemoryBarrier const load_barrier = {
-        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        NULL,
-        0U,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        sampled_asset_image,
-        sampled_asset_image_subresource_range};
-
-    VkPipelineStageFlags const load_source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-    VkPipelineStageFlags const load_destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkBufferImageCopy const region = {src_offset, buffer_row_length, buffer_image_height, {VK_IMAGE_ASPECT_COLOR_BIT, destination_mip_level, destination_array_layer, 1U}, {0U, 0U, 0U}, {image_mip_level_width, image_mip_level_height, 1U}};
 
     if (this->m_has_dedicated_upload_queue)
     {
@@ -1362,15 +1430,11 @@ void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_samp
         {
             assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
 
-            this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, 0U, NULL, 1U, &load_barrier);
-
             this->m_pfn_cmd_copy_buffer_to_image(this->m_upload_command_buffer, staging_upload_buffer, sampled_asset_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
         }
         else
         {
             assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
-
-            this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, 0U, NULL, 1U, &load_barrier);
 
             this->m_pfn_cmd_copy_buffer_to_image(this->m_upload_command_buffer, staging_upload_buffer, sampled_asset_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
         }
@@ -1379,13 +1443,11 @@ void brx_pal_vk_upload_command_buffer::upload_from_staging_upload_buffer_to_samp
     {
         assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
 
-        this->m_pfn_cmd_pipeline_barrier(this->m_graphics_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, 0U, NULL, 1U, &load_barrier);
-
         this->m_pfn_cmd_copy_buffer_to_image(this->m_graphics_command_buffer, staging_upload_buffer, sampled_asset_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
     }
 }
 
-void brx_pal_vk_upload_command_buffer::build_non_compacted_bottom_level_acceleration_structure_pass_load(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *wrapped_acceleration_structure_build_input_read_only_buffers)
+void brx_pal_vk_upload_command_buffer::acceleration_structure_build_input_read_only_buffer_load(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *wrapped_acceleration_structure_build_input_read_only_buffers)
 {
     mcrt_vector<VkBufferMemoryBarrier> load_barriers(static_cast<size_t>(acceleration_structure_build_input_read_only_buffer_count));
 
@@ -1429,6 +1491,11 @@ void brx_pal_vk_upload_command_buffer::build_non_compacted_bottom_level_accelera
 
         this->m_pfn_cmd_pipeline_barrier(this->m_graphics_command_buffer, load_source_stage, load_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(load_barriers.size()), &load_barriers[0], 0U, NULL);
     }
+}
+
+void brx_pal_vk_upload_command_buffer::acceleration_structure_build_input_read_only_buffer_store(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *acceleration_structure_build_input_read_only_buffers)
+{
+    // NOTE: we do NOT need to care "store" barriers for the buffers, since we do not write the buffers and there is no "layout" transitions for the buffers
 }
 
 void brx_pal_vk_upload_command_buffer::build_non_compacted_bottom_level_acceleration_structure(brx_pal_non_compacted_bottom_level_acceleration_structure *wrapped_non_compacted_bottom_level_acceleration_structure, uint32_t bottom_level_acceleration_structure_geometry_count, BRX_PAL_BOTTOM_LEVEL_ACCELERATION_STRUCTURE_GEOMETRY const *wrapped_bottom_level_acceleration_structure_geometries, brx_pal_scratch_buffer *wrapped_scratch_buffer, brx_pal_compacted_bottom_level_acceleration_structure_size_query_pool *wrapped_compacted_bottom_level_acceleration_structure_size_query_pool, uint32_t query_index)
@@ -1566,11 +1633,6 @@ void brx_pal_vk_upload_command_buffer::build_non_compacted_bottom_level_accelera
     }
 }
 
-void brx_pal_vk_upload_command_buffer::build_non_compacted_bottom_level_acceleration_structure_pass_store(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *acceleration_structure_build_input_read_only_buffers)
-{
-    // NOTE: we do NOT need to care "store" barriers for the buffers, since we do not write the buffers and there is no "layout" transitions for the buffers
-}
-
 void brx_pal_vk_upload_command_buffer::compact_bottom_level_acceleration_structure(brx_pal_compacted_bottom_level_acceleration_structure *wrapped_destination_compacted_bottom_level_acceleration_structure, brx_pal_non_compacted_bottom_level_acceleration_structure *wrapped_source_non_compacted_bottom_level_acceleration_structure)
 {
     // NOTE: we do NOT need the barrier to synchronize the staging non compacted bottom level acceleration structure, since we already use the fence to wait for the GPU completion to have the size of the compacted acceleration structure.
@@ -1613,183 +1675,166 @@ void brx_pal_vk_upload_command_buffer::compact_bottom_level_acceleration_structu
 
 void brx_pal_vk_upload_command_buffer::release(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *wrapped_compacted_bottom_level_acceleration_structures)
 {
-    mcrt_vector<VkBufferMemoryBarrier> upload_queue_family_buffer_release_barriers(static_cast<size_t>(storage_asset_buffer_count));
-    mcrt_vector<VkBufferMemoryBarrier> graphics_queue_family_buffer_release_barriers(static_cast<size_t>(storage_asset_buffer_count));
-
-    mcrt_vector<VkImageMemoryBarrier> upload_queue_family_image_release_barriers(static_cast<size_t>(sampled_asset_image_subresource_count));
-    mcrt_vector<VkImageMemoryBarrier> graphics_queue_family_image_release_barriers(static_cast<size_t>(sampled_asset_image_subresource_count));
-
-    mcrt_vector<VkBufferMemoryBarrier> upload_queue_family_acceleration_structure_release_barriers(static_cast<size_t>(compacted_bottom_level_acceleration_structure_count));
-    mcrt_vector<VkBufferMemoryBarrier> graphics_queue_family_acceleration_structure_release_barriers(static_cast<size_t>(compacted_bottom_level_acceleration_structure_count));
-
-    for (uint32_t storage_asset_buffer_index = 0U; storage_asset_buffer_index < storage_asset_buffer_count; ++storage_asset_buffer_index)
+    if (storage_asset_buffer_count > 0U || sampled_asset_image_subresource_count > 0U)
     {
-        VkBuffer const storage_asset_buffer = static_cast<brx_pal_vk_storage_asset_buffer const *>(wrapped_storage_asset_buffers[storage_asset_buffer_index])->get_buffer();
+        mcrt_vector<VkBufferMemoryBarrier> upload_queue_family_buffer_release_barriers(static_cast<size_t>(storage_asset_buffer_count));
+        mcrt_vector<VkBufferMemoryBarrier> graphics_queue_family_buffer_release_barriers(static_cast<size_t>(storage_asset_buffer_count));
 
-        upload_queue_family_buffer_release_barriers[storage_asset_buffer_index] = VkBufferMemoryBarrier{
-            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-            NULL,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            0U,
-            this->m_upload_queue_family_index,
-            this->m_graphics_queue_family_index,
-            storage_asset_buffer,
-            0U,
-            VK_WHOLE_SIZE};
+        mcrt_vector<VkImageMemoryBarrier> upload_queue_family_image_release_barriers(static_cast<size_t>(sampled_asset_image_subresource_count));
+        mcrt_vector<VkImageMemoryBarrier> graphics_queue_family_image_release_barriers(static_cast<size_t>(sampled_asset_image_subresource_count));
 
-        graphics_queue_family_buffer_release_barriers[storage_asset_buffer_index] = VkBufferMemoryBarrier{
-            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-            NULL,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-            VK_QUEUE_FAMILY_IGNORED,
-            VK_QUEUE_FAMILY_IGNORED,
-            storage_asset_buffer,
-            0U,
-            VK_WHOLE_SIZE};
-    }
-
-    for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
-    {
-        VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_sampled_asset_images)->get_image();
-
-        VkImageSubresourceRange const sampled_asset_image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_mip_level, 1U, 0U, 1U};
-
-        upload_queue_family_image_release_barriers[sampled_asset_image_subresource_index] = VkImageMemoryBarrier{
-            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            NULL,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            0U,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            this->m_upload_queue_family_index,
-            this->m_graphics_queue_family_index,
-            sampled_asset_image,
-            sampled_asset_image_subresource_range};
-
-        graphics_queue_family_image_release_barriers[sampled_asset_image_subresource_index] = VkImageMemoryBarrier{
-            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            NULL,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_QUEUE_FAMILY_IGNORED,
-            VK_QUEUE_FAMILY_IGNORED,
-            sampled_asset_image,
-            sampled_asset_image_subresource_range};
-    }
-
-    for (uint32_t compacted_bottom_level_acceleration_structure_index = 0U; compacted_bottom_level_acceleration_structure_index < compacted_bottom_level_acceleration_structure_count; ++compacted_bottom_level_acceleration_structure_index)
-    {
-        VkBuffer const asset_acceleration_structure_buffer = static_cast<brx_pal_vk_compacted_bottom_level_acceleration_structure const *>(wrapped_compacted_bottom_level_acceleration_structures[compacted_bottom_level_acceleration_structure_index])->get_buffer();
-
-        upload_queue_family_acceleration_structure_release_barriers[compacted_bottom_level_acceleration_structure_index] = VkBufferMemoryBarrier{
-            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-            NULL,
-            VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
-            0U,
-            this->m_upload_queue_family_index,
-            this->m_graphics_queue_family_index,
-            asset_acceleration_structure_buffer,
-            0U,
-            VK_WHOLE_SIZE};
-
-        graphics_queue_family_acceleration_structure_release_barriers[compacted_bottom_level_acceleration_structure_index] = VkBufferMemoryBarrier{
-            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-            NULL,
-            VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
-            VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
-            VK_QUEUE_FAMILY_IGNORED,
-            VK_QUEUE_FAMILY_IGNORED,
-            asset_acceleration_structure_buffer,
-            0U,
-            VK_WHOLE_SIZE};
-    }
-
-    VkPipelineStageFlags const upload_queue_family_buffer_image_release_source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkPipelineStageFlags const upload_queue_family_release_destination_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-
-    VkPipelineStageFlags const graphics_queue_family_buffer_image_release_source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkPipelineStageFlags const graphics_queue_family_buffer_image_release_destination_stage = (!this->m_support_ray_tracing) ? (g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages) : (g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages | g_graphics_queue_family_ray_tracing_pipeline_shader_read_stages);
-
-    VkPipelineStageFlags const upload_queue_family_acceleration_structure_release_source_stage = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
-
-    VkPipelineStageFlags const graphics_queue_family_acceleration_structure_release_source_stage = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
-    // destination stage: build top level acceleration structure
-    VkPipelineStageFlags const graphics_queue_family_acceleration_structure_release_destination_stage = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
-
-    if (this->m_has_dedicated_upload_queue)
-    {
-        if (this->m_upload_queue_family_index != this->m_graphics_queue_family_index)
+        for (uint32_t storage_asset_buffer_index = 0U; storage_asset_buffer_index < storage_asset_buffer_count; ++storage_asset_buffer_index)
         {
-            assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+            VkBuffer const storage_asset_buffer = static_cast<brx_pal_vk_storage_asset_buffer const *>(wrapped_storage_asset_buffers[storage_asset_buffer_index])->get_buffer();
 
-            if (storage_asset_buffer_count > 0U || sampled_asset_image_subresource_count > 0U)
+            upload_queue_family_buffer_release_barriers[storage_asset_buffer_index] = VkBufferMemoryBarrier{
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                NULL,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                0U,
+                this->m_upload_queue_family_index,
+                this->m_graphics_queue_family_index,
+                storage_asset_buffer,
+                0U,
+                VK_WHOLE_SIZE};
+
+            graphics_queue_family_buffer_release_barriers[storage_asset_buffer_index] = VkBufferMemoryBarrier{
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                NULL,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_QUEUE_FAMILY_IGNORED,
+                VK_QUEUE_FAMILY_IGNORED,
+                storage_asset_buffer,
+                0U,
+                VK_WHOLE_SIZE};
+        }
+
+        for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
+        {
+            VkImage const sampled_asset_image = static_cast<brx_pal_vk_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_sampled_asset_image)->get_image();
+
+            VkImageSubresourceRange const sampled_asset_image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_mip_level, 1U, wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_array_layer, 1U};
+
+            upload_queue_family_image_release_barriers[sampled_asset_image_subresource_index] = VkImageMemoryBarrier{
+                VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                NULL,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                0U,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                this->m_upload_queue_family_index,
+                this->m_graphics_queue_family_index,
+                sampled_asset_image,
+                sampled_asset_image_subresource_range};
+
+            graphics_queue_family_image_release_barriers[sampled_asset_image_subresource_index] = VkImageMemoryBarrier{
+                VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                NULL,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_QUEUE_FAMILY_IGNORED,
+                VK_QUEUE_FAMILY_IGNORED,
+                sampled_asset_image,
+                sampled_asset_image_subresource_range};
+        }
+
+        VkPipelineStageFlags const upload_queue_family_buffer_image_release_source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        VkPipelineStageFlags const upload_queue_family_release_destination_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+        VkPipelineStageFlags const graphics_queue_family_buffer_image_release_source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        VkPipelineStageFlags const graphics_queue_family_buffer_image_release_destination_stage = (!this->m_support_ray_tracing) ? (g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages) : (g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages | g_graphics_queue_family_ray_tracing_pipeline_shader_read_stages);
+
+        assert((!upload_queue_family_buffer_release_barriers.empty()) || (!upload_queue_family_image_release_barriers.empty()));
+        assert((!graphics_queue_family_buffer_release_barriers.empty()) || (!graphics_queue_family_image_release_barriers.empty()));
+
+        if (this->m_has_dedicated_upload_queue)
+        {
+            if (this->m_upload_queue_family_index != this->m_graphics_queue_family_index)
             {
+                assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
                 this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, upload_queue_family_buffer_image_release_source_stage, upload_queue_family_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(upload_queue_family_buffer_release_barriers.size()), upload_queue_family_buffer_release_barriers.data(), static_cast<uint32_t>(upload_queue_family_image_release_barriers.size()), upload_queue_family_image_release_barriers.data());
             }
-
-            if (compacted_bottom_level_acceleration_structure_count > 0U)
+            else
             {
-                this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, upload_queue_family_acceleration_structure_release_source_stage, upload_queue_family_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(upload_queue_family_acceleration_structure_release_barriers.size()), upload_queue_family_acceleration_structure_release_barriers.data(), 0U, NULL);
+                assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
+                this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, graphics_queue_family_buffer_image_release_source_stage, graphics_queue_family_buffer_image_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_buffer_release_barriers.size()), graphics_queue_family_buffer_release_barriers.data(), static_cast<uint32_t>(graphics_queue_family_image_release_barriers.size()), graphics_queue_family_image_release_barriers.data());
             }
         }
         else
         {
-            assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+            assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
 
-            if (storage_asset_buffer_count > 0U || sampled_asset_image_subresource_count > 0U)
+            this->m_pfn_cmd_pipeline_barrier(this->m_graphics_command_buffer, graphics_queue_family_buffer_image_release_source_stage, graphics_queue_family_buffer_image_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_buffer_release_barriers.size()), graphics_queue_family_buffer_release_barriers.data(), static_cast<uint32_t>(graphics_queue_family_image_release_barriers.size()), graphics_queue_family_image_release_barriers.data());
+        }
+    }
+
+    if (compacted_bottom_level_acceleration_structure_count > 0U)
+    {
+        mcrt_vector<VkBufferMemoryBarrier> upload_queue_family_acceleration_structure_release_barriers(static_cast<size_t>(compacted_bottom_level_acceleration_structure_count));
+        mcrt_vector<VkBufferMemoryBarrier> graphics_queue_family_acceleration_structure_release_barriers(static_cast<size_t>(compacted_bottom_level_acceleration_structure_count));
+
+        for (uint32_t compacted_bottom_level_acceleration_structure_index = 0U; compacted_bottom_level_acceleration_structure_index < compacted_bottom_level_acceleration_structure_count; ++compacted_bottom_level_acceleration_structure_index)
+        {
+            VkBuffer const asset_acceleration_structure_buffer = static_cast<brx_pal_vk_compacted_bottom_level_acceleration_structure const *>(wrapped_compacted_bottom_level_acceleration_structures[compacted_bottom_level_acceleration_structure_index])->get_buffer();
+
+            upload_queue_family_acceleration_structure_release_barriers[compacted_bottom_level_acceleration_structure_index] = VkBufferMemoryBarrier{
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                NULL,
+                VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+                0U,
+                this->m_upload_queue_family_index,
+                this->m_graphics_queue_family_index,
+                asset_acceleration_structure_buffer,
+                0U,
+                VK_WHOLE_SIZE};
+
+            graphics_queue_family_acceleration_structure_release_barriers[compacted_bottom_level_acceleration_structure_index] = VkBufferMemoryBarrier{
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                NULL,
+                VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+                VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+                VK_QUEUE_FAMILY_IGNORED,
+                VK_QUEUE_FAMILY_IGNORED,
+                asset_acceleration_structure_buffer,
+                0U,
+                VK_WHOLE_SIZE};
+        }
+
+        VkPipelineStageFlags const upload_queue_family_acceleration_structure_release_source_stage = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        VkPipelineStageFlags const upload_queue_family_release_destination_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+        VkPipelineStageFlags const graphics_queue_family_acceleration_structure_release_source_stage = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        // destination stage: build top level acceleration structure
+        VkPipelineStageFlags const graphics_queue_family_acceleration_structure_release_destination_stage = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+        assert(!upload_queue_family_acceleration_structure_release_barriers.empty());
+        assert(!graphics_queue_family_acceleration_structure_release_barriers.empty());
+
+        if (this->m_has_dedicated_upload_queue)
+        {
+            if (this->m_upload_queue_family_index != this->m_graphics_queue_family_index)
             {
-                this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, graphics_queue_family_buffer_image_release_source_stage, graphics_queue_family_buffer_image_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_buffer_release_barriers.size()), graphics_queue_family_buffer_release_barriers.data(), static_cast<uint32_t>(graphics_queue_family_image_release_barriers.size()), graphics_queue_family_image_release_barriers.data());
+                assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
+                this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, upload_queue_family_acceleration_structure_release_source_stage, upload_queue_family_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(upload_queue_family_acceleration_structure_release_barriers.size()), upload_queue_family_acceleration_structure_release_barriers.data(), 0U, NULL);
             }
-
-            if (compacted_bottom_level_acceleration_structure_count > 0U)
+            else
             {
+                assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+
                 this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, graphics_queue_family_acceleration_structure_release_source_stage, graphics_queue_family_acceleration_structure_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_acceleration_structure_release_barriers.size()), graphics_queue_family_acceleration_structure_release_barriers.data(), 0U, NULL);
             }
         }
-    }
-    else
-    {
-        assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
-
-        if (storage_asset_buffer_count > 0U || sampled_asset_image_subresource_count > 0U)
-        {
-            this->m_pfn_cmd_pipeline_barrier(this->m_graphics_command_buffer, graphics_queue_family_buffer_image_release_source_stage, graphics_queue_family_buffer_image_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_buffer_release_barriers.size()), graphics_queue_family_buffer_release_barriers.data(), static_cast<uint32_t>(graphics_queue_family_image_release_barriers.size()), graphics_queue_family_image_release_barriers.data());
-        }
-
-        if (compacted_bottom_level_acceleration_structure_count > 0U)
-        {
-            this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, graphics_queue_family_acceleration_structure_release_source_stage, graphics_queue_family_acceleration_structure_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_acceleration_structure_release_barriers.size()), graphics_queue_family_acceleration_structure_release_barriers.data(), 0U, NULL);
-        }
-    }
-}
-
-void brx_pal_vk_upload_command_buffer::end()
-{
-    if (this->m_has_dedicated_upload_queue)
-    {
-        if (this->m_upload_queue_family_index != this->m_graphics_queue_family_index)
-        {
-            assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
-
-            VkResult res_end_upload_command_buffer = this->m_pfn_end_command_buffer(this->m_upload_command_buffer);
-            assert(VK_SUCCESS == res_end_upload_command_buffer);
-        }
         else
         {
-            assert(VK_NULL_HANDLE != this->m_upload_command_pool && VK_NULL_HANDLE != this->m_upload_command_buffer && VK_NULL_HANDLE == this->m_graphics_command_pool && VK_NULL_HANDLE == this->m_graphics_command_buffer && VK_NULL_HANDLE != this->m_upload_queue_submit_semaphore);
+            assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
 
-            VkResult res_end_upload_command_buffer = this->m_pfn_end_command_buffer(this->m_upload_command_buffer);
-            assert(VK_SUCCESS == res_end_upload_command_buffer);
+            this->m_pfn_cmd_pipeline_barrier(this->m_upload_command_buffer, graphics_queue_family_acceleration_structure_release_source_stage, graphics_queue_family_acceleration_structure_release_destination_stage, 0U, 0U, NULL, static_cast<uint32_t>(graphics_queue_family_acceleration_structure_release_barriers.size()), graphics_queue_family_acceleration_structure_release_barriers.data(), 0U, NULL);
         }
-    }
-    else
-    {
-        assert(VK_NULL_HANDLE == this->m_upload_command_pool && VK_NULL_HANDLE == this->m_upload_command_buffer && VK_NULL_HANDLE != this->m_graphics_command_pool && VK_NULL_HANDLE != this->m_graphics_command_buffer && VK_NULL_HANDLE == this->m_upload_queue_submit_semaphore);
-
-        VkResult res_end_graphics_command_buffer = this->m_pfn_end_command_buffer(this->m_graphics_command_buffer);
-        assert(VK_SUCCESS == res_end_graphics_command_buffer);
     }
 }

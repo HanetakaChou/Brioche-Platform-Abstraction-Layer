@@ -543,8 +543,13 @@ brx_pal_vk_sampled_asset_image::brx_pal_vk_sampled_asset_image() : m_image(VK_NU
 {
 }
 
-void brx_pal_vk_sampled_asset_image::init(VkDevice device, PFN_vkCreateImageView pfn_create_image_view, VkAllocationCallbacks const *allocation_callbacks, VmaAllocator memory_allocator, VmaPool sampled_asset_image_memory_pool, VkFormat format, uint32_t width, uint32_t height, uint32_t mip_levels)
+void brx_pal_vk_sampled_asset_image::init(VkDevice device, PFN_vkCreateImageView pfn_create_image_view, VkAllocationCallbacks const *allocation_callbacks, VmaAllocator memory_allocator, VmaPool sampled_asset_image_memory_pool, VkFormat format, uint32_t width, uint32_t height, bool array, uint32_t wrapped_array_layers, uint32_t mip_levels)
 {
+	assert((array) || (1U == wrapped_array_layers));
+	uint32_t const array_layers = (!array) ? 1U : wrapped_array_layers;
+
+	VkImageViewType const image_view_type = (!array) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+
 	VkImageCreateInfo const image_create_info = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		NULL,
@@ -553,7 +558,7 @@ void brx_pal_vk_sampled_asset_image::init(VkDevice device, PFN_vkCreateImageView
 		format,
 		{width, height, 1U},
 		mip_levels,
-		1U,
+		array_layers,
 		VK_SAMPLE_COUNT_1_BIT,
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -582,10 +587,10 @@ void brx_pal_vk_sampled_asset_image::init(VkDevice device, PFN_vkCreateImageView
 		NULL,
 		0U,
 		this->m_image,
-		VK_IMAGE_VIEW_TYPE_2D,
+		image_view_type,
 		format,
 		{VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
-		{VK_IMAGE_ASPECT_COLOR_BIT, 0U, mip_levels, 0U, 1U}};
+		{VK_IMAGE_ASPECT_COLOR_BIT, 0U, mip_levels, 0U, array_layers}};
 
 	assert(VK_NULL_HANDLE == this->m_image_view);
 	VkResult res_create_image_view = pfn_create_image_view(device, &image_view_create_info, allocation_callbacks, &this->m_image_view);
@@ -631,9 +636,4 @@ VkImageView brx_pal_vk_sampled_asset_image::get_sampled_image_view() const
 brx_pal_sampled_image const *brx_pal_vk_sampled_asset_image::get_sampled_image() const
 {
 	return static_cast<brx_pal_vk_sampled_image const *>(this);
-}
-
-uint32_t brx_pal_vk_sampled_asset_image::get_mip_levels() const
-{
-	return this->m_mip_levels;
 }

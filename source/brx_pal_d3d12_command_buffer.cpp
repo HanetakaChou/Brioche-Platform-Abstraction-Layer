@@ -94,6 +94,26 @@ void brx_pal_d3d12_graphics_command_buffer::begin()
     this->m_current_vertex_buffer_strides.clear();
 }
 
+void brx_pal_d3d12_graphics_command_buffer::end()
+{
+    HRESULT const hr_close = this->m_command_list->Close();
+    assert(SUCCEEDED(hr_close));
+}
+
+void brx_pal_d3d12_graphics_command_buffer::begin_debug_utils_label(char const *label_name)
+{
+#ifndef NDEBUG
+    PIXBeginEvent(this->m_command_list, 0, label_name);
+#endif
+}
+
+void brx_pal_d3d12_graphics_command_buffer::end_debug_utils_label()
+{
+#ifndef NDEBUG
+    PIXEndEvent(this->m_command_list);
+#endif
+}
+
 void brx_pal_d3d12_graphics_command_buffer::acquire(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *wrapped_compacted_bottom_level_acceleration_structures)
 {
     mcrt_vector<D3D12_RESOURCE_BARRIER> acquire_barriers(static_cast<size_t>(storage_asset_buffer_count + sampled_asset_image_subresource_count + compacted_bottom_level_acceleration_structure_count));
@@ -114,14 +134,18 @@ void brx_pal_d3d12_graphics_command_buffer::acquire(uint32_t storage_asset_buffe
 
     for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
     {
-        ID3D12Resource *const sampled_asset_image_resource = static_cast<brx_pal_d3d12_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_sampled_asset_images)->get_resource();
+        BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const &sampled_asset_image_subresource = wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index];
+
+        brx_pal_d3d12_sampled_asset_image const *const sampled_asset_image = static_cast<brx_pal_d3d12_sampled_asset_image const *>(sampled_asset_image_subresource.m_sampled_asset_image);
+
+        uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(sampled_asset_image_subresource.m_mip_level, sampled_asset_image_subresource.m_array_layer, 0U, sampled_asset_image->get_mip_levels(), sampled_asset_image->get_array_layers());
 
         acquire_barriers[storage_asset_buffer_count + sampled_asset_image_subresource_index] = D3D12_RESOURCE_BARRIER{
             .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
             .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
             .Transition = {
-                sampled_asset_image_resource,
-                wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index].m_mip_level,
+                sampled_asset_image->get_resource(),
+                subresource_index,
                 D3D12_RESOURCE_STATE_COMMON,
                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}};
     }
@@ -142,20 +166,6 @@ void brx_pal_d3d12_graphics_command_buffer::acquire(uint32_t storage_asset_buffe
     {
         this->m_command_list->ResourceBarrier(static_cast<UINT>(acquire_barriers.size()), &acquire_barriers[0]);
     }
-}
-
-void brx_pal_d3d12_graphics_command_buffer::begin_debug_utils_label(char const *label_name)
-{
-#ifndef NDEBUG
-    PIXBeginEvent(this->m_command_list, 0, label_name);
-#endif
-}
-
-void brx_pal_d3d12_graphics_command_buffer::end_debug_utils_label()
-{
-#ifndef NDEBUG
-    PIXEndEvent(this->m_command_list);
-#endif
 }
 
 void brx_pal_d3d12_graphics_command_buffer::begin_render_pass(brx_pal_render_pass const *wrapped_render_pass, brx_pal_frame_buffer const *wrapped_frame_buffer, uint32_t width, uint32_t height, uint32_t color_clear_value_count, float const (*color_clear_values)[4], float const *depth_clear_value, uint8_t const *stencil_clear_value)
@@ -339,6 +349,245 @@ void brx_pal_d3d12_graphics_command_buffer::begin_render_pass(brx_pal_render_pas
     }
 }
 
+void brx_pal_d3d12_graphics_command_buffer::end_render_pass()
+{
+    assert(NULL != this->m_current_render_pass);
+    assert(NULL != this->m_current_frame_buffer);
+
+    uint32_t const color_attachment_count = this->m_current_render_pass->get_color_attachment_count();
+    bool const has_depth_stencil_attachment = (BRX_PAL_DEPTH_STENCIL_ATTACHMENT_FORMAT_UNDEFINED != this->m_current_render_pass->get_depth_stencil_attachment_format());
+
+    brx_pal_d3d12_color_attachment_image const *const *const color_attachment_images = this->m_current_frame_buffer->get_color_attachment_images();
+    brx_pal_d3d12_depth_stencil_attachment_image const *const depth_stencil_attachment_image = this->m_current_frame_buffer->get_depth_stencil_attachment_image();
+
+    assert(this->m_current_frame_buffer->get_color_attachment_image_count() == color_attachment_count);
+    assert((NULL != depth_stencil_attachment_image) == has_depth_stencil_attachment);
+
+    // store barrier
+    {
+        mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers;
+        store_barriers.reserve(color_attachment_count + (has_depth_stencil_attachment ? 1U : 0U));
+
+        for (uint32_t color_attachment_index = 0U; color_attachment_index < color_attachment_count; ++color_attachment_index)
+        {
+            bool const is_color_attachment_store_flush_for_present = this->m_current_render_pass->is_color_attachment_store_flush_for_present(color_attachment_index);
+
+            brx_pal_d3d12_color_attachment_image const *const color_attachment_image = color_attachment_images[color_attachment_index];
+            assert(NULL != color_attachment_image);
+
+            bool const allow_sampled_image = color_attachment_image->allow_sampled_image();
+
+            ID3D12Resource *const render_target_resource = color_attachment_image->get_resource();
+            assert(NULL != render_target_resource);
+
+            if (!is_color_attachment_store_flush_for_present)
+            {
+                if (allow_sampled_image)
+                {
+                    store_barriers.push_back(D3D12_RESOURCE_BARRIER{
+                        .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                        .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                        .Transition = {
+                            render_target_resource,
+                            0U,
+                            D3D12_RESOURCE_STATE_RENDER_TARGET,
+                            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}});
+                }
+                else
+                {
+                    // Do Nothing
+                }
+            }
+            else
+            {
+
+                assert(!allow_sampled_image);
+                store_barriers.push_back(D3D12_RESOURCE_BARRIER{
+                    .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                    .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                    .Transition = {
+                        render_target_resource,
+                        0U,
+                        D3D12_RESOURCE_STATE_RENDER_TARGET,
+                        D3D12_RESOURCE_STATE_PRESENT}});
+            }
+        }
+
+        assert(store_barriers.size() <= color_attachment_count);
+
+        if (has_depth_stencil_attachment)
+        {
+            assert(NULL != depth_stencil_attachment_image);
+
+            bool const allow_sampled_image = depth_stencil_attachment_image->allow_sampled_image();
+
+            ID3D12Resource *const depth_stencil_resource = depth_stencil_attachment_image->get_resource();
+            assert(NULL != depth_stencil_resource);
+
+            if (allow_sampled_image)
+            {
+                store_barriers.push_back(D3D12_RESOURCE_BARRIER{
+                    .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                    .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                    .Transition = {
+                        depth_stencil_resource,
+                        0U,
+                        D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}});
+            }
+            else
+            {
+                // Do Nothing
+            }
+        }
+
+        assert(store_barriers.size() <= (color_attachment_count + (has_depth_stencil_attachment ? 1U : 0U)));
+
+        if (!store_barriers.empty())
+        {
+            this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), &store_barriers[0]);
+        }
+    }
+
+    this->m_current_render_pass = NULL;
+    this->m_current_frame_buffer = NULL;
+}
+
+void brx_pal_d3d12_graphics_command_buffer::storage_resource_load_dont_care(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images)
+{
+    // there is no such "VK_IMAGE_LAYOUT_UNDEFINED" state in D3D12
+    // we do not really distinguish between "load dont care" and "load load"
+
+    // TODO: Enhanced Barriers
+    // https://microsoft.github.io/DirectX-Specs/d3d/D3D12EnhancedBarriers.html
+    // D3D12_BARRIER_LAYOUT_UNDEFINED
+
+    return this->storage_resource_load_load(storage_buffer_count, storage_buffers, storage_image_count, storage_images);
+}
+
+void brx_pal_d3d12_graphics_command_buffer::storage_resource_load_load(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
+{
+    mcrt_vector<D3D12_RESOURCE_BARRIER> load_barriers(static_cast<size_t>(storage_buffer_count + storage_image_count));
+
+    for (uint32_t storage_buffer_index = 0U; storage_buffer_index < storage_buffer_count; ++storage_buffer_index)
+    {
+        ID3D12Resource *const storage_buffer_resource = static_cast<brx_pal_d3d12_storage_buffer const *>(wrapped_storage_buffers[storage_buffer_index])->get_resource();
+
+        load_barriers[storage_buffer_index] = D3D12_RESOURCE_BARRIER{
+            .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            .Transition = {
+                storage_buffer_resource,
+                0U,
+                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                D3D12_RESOURCE_STATE_UNORDERED_ACCESS}};
+    }
+
+    for (uint32_t storage_image_index = 0U; storage_image_index < storage_image_count; ++storage_image_index)
+    {
+        bool const allow_sampled_image = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->allow_sampled_image();
+        ID3D12Resource *const storage_image_resource = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->get_resource();
+
+        if (allow_sampled_image)
+        {
+            load_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .Transition = {
+                    storage_image_resource,
+                    0U,
+                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS}};
+        }
+        else
+        {
+            load_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .UAV = {
+                    storage_image_resource}};
+        }
+    }
+
+    this->m_command_list->ResourceBarrier(static_cast<UINT>(load_barriers.size()), load_barriers.data());
+}
+
+void brx_pal_d3d12_graphics_command_buffer::storage_resource_barrier(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
+{
+    mcrt_vector<D3D12_RESOURCE_BARRIER> intermediate_barriers(static_cast<size_t>(storage_buffer_count + storage_image_count));
+
+    for (uint32_t storage_buffer_index = 0U; storage_buffer_index < storage_buffer_count; ++storage_buffer_index)
+    {
+        ID3D12Resource *const storage_buffer_resource = static_cast<brx_pal_d3d12_storage_buffer const *>(wrapped_storage_buffers[storage_buffer_index])->get_resource();
+
+        intermediate_barriers[storage_buffer_index] = D3D12_RESOURCE_BARRIER{
+            .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
+            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            .UAV = {
+                storage_buffer_resource}};
+    }
+
+    for (uint32_t storage_image_index = 0U; storage_image_index < storage_image_count; ++storage_image_index)
+    {
+        ID3D12Resource *const storage_image_resource = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->get_resource();
+
+        intermediate_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
+            .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
+            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            .UAV = {
+                storage_image_resource}};
+    }
+
+    this->m_command_list->ResourceBarrier(static_cast<UINT>(intermediate_barriers.size()), intermediate_barriers.data());
+}
+
+void brx_pal_d3d12_graphics_command_buffer::storage_resource_store(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
+{
+    mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers(static_cast<size_t>(storage_buffer_count + storage_image_count));
+
+    for (uint32_t storage_buffer_index = 0U; storage_buffer_index < storage_buffer_count; ++storage_buffer_index)
+    {
+        ID3D12Resource *const storage_buffer_resource = static_cast<brx_pal_d3d12_storage_buffer const *>(wrapped_storage_buffers[storage_buffer_index])->get_resource();
+
+        store_barriers[storage_buffer_index] = D3D12_RESOURCE_BARRIER{
+            .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            .Transition = {
+                storage_buffer_resource,
+                0U,
+                D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}};
+    }
+
+    for (uint32_t storage_image_index = 0U; storage_image_index < storage_image_count; ++storage_image_index)
+    {
+        bool const allow_sampled_image = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->allow_sampled_image();
+        ID3D12Resource *const storage_image_resource = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->get_resource();
+
+        if (allow_sampled_image)
+        {
+            store_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .Transition = {
+                    storage_image_resource,
+                    0U,
+                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}};
+        }
+        else
+        {
+            store_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .UAV = {
+                    storage_image_resource}};
+        }
+    }
+
+    this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), store_barriers.data());
+}
+
 void brx_pal_d3d12_graphics_command_buffer::bind_graphics_pipeline(brx_pal_graphics_pipeline const *wrapped_graphics_pipeline)
 {
     assert(NULL != wrapped_graphics_pipeline);
@@ -481,110 +730,6 @@ void brx_pal_d3d12_graphics_command_buffer::draw(uint32_t vertex_count, uint32_t
     this->m_command_list->DrawInstanced(vertex_count, instance_count, first_vertex, first_instance);
 }
 
-void brx_pal_d3d12_graphics_command_buffer::end_render_pass()
-{
-    assert(NULL != this->m_current_render_pass);
-    assert(NULL != this->m_current_frame_buffer);
-
-    uint32_t const color_attachment_count = this->m_current_render_pass->get_color_attachment_count();
-    bool const has_depth_stencil_attachment = (BRX_PAL_DEPTH_STENCIL_ATTACHMENT_FORMAT_UNDEFINED != this->m_current_render_pass->get_depth_stencil_attachment_format());
-
-    brx_pal_d3d12_color_attachment_image const *const *const color_attachment_images = this->m_current_frame_buffer->get_color_attachment_images();
-    brx_pal_d3d12_depth_stencil_attachment_image const *const depth_stencil_attachment_image = this->m_current_frame_buffer->get_depth_stencil_attachment_image();
-
-    assert(this->m_current_frame_buffer->get_color_attachment_image_count() == color_attachment_count);
-    assert((NULL != depth_stencil_attachment_image) == has_depth_stencil_attachment);
-
-    // store barrier
-    {
-        mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers;
-        store_barriers.reserve(color_attachment_count + (has_depth_stencil_attachment ? 1U : 0U));
-
-        for (uint32_t color_attachment_index = 0U; color_attachment_index < color_attachment_count; ++color_attachment_index)
-        {
-            bool const is_color_attachment_store_flush_for_present = this->m_current_render_pass->is_color_attachment_store_flush_for_present(color_attachment_index);
-
-            brx_pal_d3d12_color_attachment_image const *const color_attachment_image = color_attachment_images[color_attachment_index];
-            assert(NULL != color_attachment_image);
-
-            bool const allow_sampled_image = color_attachment_image->allow_sampled_image();
-
-            ID3D12Resource *const render_target_resource = color_attachment_image->get_resource();
-            assert(NULL != render_target_resource);
-
-            if (!is_color_attachment_store_flush_for_present)
-            {
-                if (allow_sampled_image)
-                {
-                    store_barriers.push_back(D3D12_RESOURCE_BARRIER{
-                        .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                        .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                        .Transition = {
-                            render_target_resource,
-                            0U,
-                            D3D12_RESOURCE_STATE_RENDER_TARGET,
-                            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}});
-                }
-                else
-                {
-                    // Do Nothing
-                }
-            }
-            else
-            {
-
-                assert(!allow_sampled_image);
-                store_barriers.push_back(D3D12_RESOURCE_BARRIER{
-                    .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                    .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                    .Transition = {
-                        render_target_resource,
-                        0U,
-                        D3D12_RESOURCE_STATE_RENDER_TARGET,
-                        D3D12_RESOURCE_STATE_PRESENT}});
-            }
-        }
-
-        assert(store_barriers.size() <= color_attachment_count);
-
-        if (has_depth_stencil_attachment)
-        {
-            assert(NULL != depth_stencil_attachment_image);
-
-            bool const allow_sampled_image = depth_stencil_attachment_image->allow_sampled_image();
-
-            ID3D12Resource *const depth_stencil_resource = depth_stencil_attachment_image->get_resource();
-            assert(NULL != depth_stencil_resource);
-
-            if (allow_sampled_image)
-            {
-                store_barriers.push_back(D3D12_RESOURCE_BARRIER{
-                    .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                    .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                    .Transition = {
-                        depth_stencil_resource,
-                        0U,
-                        D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}});
-            }
-            else
-            {
-                // Do Nothing
-            }
-        }
-
-        assert(store_barriers.size() <= (color_attachment_count + (has_depth_stencil_attachment ? 1U : 0U)));
-
-        if (!store_barriers.empty())
-        {
-            this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), &store_barriers[0]);
-        }
-    }
-
-    this->m_current_render_pass = NULL;
-    this->m_current_frame_buffer = NULL;
-}
-
 void brx_pal_d3d12_graphics_command_buffer::bind_compute_pipeline(brx_pal_compute_pipeline const *wrapped_compute_pipeline)
 {
     assert(NULL != wrapped_compute_pipeline);
@@ -710,141 +855,6 @@ void brx_pal_d3d12_graphics_command_buffer::bind_compute_descriptor_sets(brx_pal
 void brx_pal_d3d12_graphics_command_buffer::dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z)
 {
     this->m_command_list->Dispatch(group_count_x, group_count_y, group_count_z);
-}
-
-void brx_pal_d3d12_graphics_command_buffer::storage_resource_load_dont_care(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images)
-{
-    // there is no such "VK_IMAGE_LAYOUT_UNDEFINED" state in D3D12
-    // we do not really distinguish between "load dont care" and "load load"
-
-    // TODO: Enhanced Barriers
-    // https://microsoft.github.io/DirectX-Specs/d3d/D3D12EnhancedBarriers.html
-    // D3D12_BARRIER_LAYOUT_UNDEFINED
-
-    return this->storage_resource_load_load(storage_buffer_count, storage_buffers, storage_image_count, storage_images);
-}
-
-void brx_pal_d3d12_graphics_command_buffer::storage_resource_load_load(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
-{
-    mcrt_vector<D3D12_RESOURCE_BARRIER> load_barriers(static_cast<size_t>(storage_buffer_count + storage_image_count));
-
-    for (uint32_t storage_buffer_index = 0U; storage_buffer_index < storage_buffer_count; ++storage_buffer_index)
-    {
-        ID3D12Resource *const storage_buffer_resource = static_cast<brx_pal_d3d12_storage_buffer const *>(wrapped_storage_buffers[storage_buffer_index])->get_resource();
-
-        load_barriers[storage_buffer_index] = D3D12_RESOURCE_BARRIER{
-            .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-            .Transition = {
-                storage_buffer_resource,
-                0U,
-                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                D3D12_RESOURCE_STATE_UNORDERED_ACCESS}};
-    }
-
-    for (uint32_t storage_image_index = 0U; storage_image_index < storage_image_count; ++storage_image_index)
-    {
-        bool const allow_sampled_image = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->allow_sampled_image();
-        ID3D12Resource *const storage_image_resource = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->get_resource();
-
-        if (allow_sampled_image)
-        {
-            load_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .Transition = {
-                    storage_image_resource,
-                    0U,
-                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS}};
-        }
-        else
-        {
-            load_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .UAV = {
-                    storage_image_resource}};
-        }
-    }
-
-    this->m_command_list->ResourceBarrier(static_cast<UINT>(load_barriers.size()), load_barriers.data());
-}
-
-void brx_pal_d3d12_graphics_command_buffer::storage_resource_barrier(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
-{
-    mcrt_vector<D3D12_RESOURCE_BARRIER> intermediate_barriers(static_cast<size_t>(storage_buffer_count + storage_image_count));
-
-    for (uint32_t storage_buffer_index = 0U; storage_buffer_index < storage_buffer_count; ++storage_buffer_index)
-    {
-        ID3D12Resource *const storage_buffer_resource = static_cast<brx_pal_d3d12_storage_buffer const *>(wrapped_storage_buffers[storage_buffer_index])->get_resource();
-
-        intermediate_barriers[storage_buffer_index] = D3D12_RESOURCE_BARRIER{
-            .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
-            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-            .UAV = {
-                storage_buffer_resource}};
-    }
-
-    for (uint32_t storage_image_index = 0U; storage_image_index < storage_image_count; ++storage_image_index)
-    {
-        ID3D12Resource *const storage_image_resource = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->get_resource();
-
-        intermediate_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
-            .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
-            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-            .UAV = {
-                storage_image_resource}};
-    }
-
-    this->m_command_list->ResourceBarrier(static_cast<UINT>(intermediate_barriers.size()), intermediate_barriers.data());
-}
-
-void brx_pal_d3d12_graphics_command_buffer::storage_resource_store(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *wrapped_storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *wrapped_storage_images)
-{
-    mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers(static_cast<size_t>(storage_buffer_count + storage_image_count));
-
-    for (uint32_t storage_buffer_index = 0U; storage_buffer_index < storage_buffer_count; ++storage_buffer_index)
-    {
-        ID3D12Resource *const storage_buffer_resource = static_cast<brx_pal_d3d12_storage_buffer const *>(wrapped_storage_buffers[storage_buffer_index])->get_resource();
-
-        store_barriers[storage_buffer_index] = D3D12_RESOURCE_BARRIER{
-            .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-            .Transition = {
-                storage_buffer_resource,
-                0U,
-                D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}};
-    }
-
-    for (uint32_t storage_image_index = 0U; storage_image_index < storage_image_count; ++storage_image_index)
-    {
-        bool const allow_sampled_image = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->allow_sampled_image();
-        ID3D12Resource *const storage_image_resource = static_cast<brx_pal_d3d12_storage_image const *>(wrapped_storage_images[storage_image_index])->get_resource();
-
-        if (allow_sampled_image)
-        {
-            store_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .Transition = {
-                    storage_image_resource,
-                    0U,
-                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE}};
-        }
-        else
-        {
-            store_barriers[storage_buffer_count + storage_image_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .UAV = {
-                    storage_image_resource}};
-        }
-    }
-
-    this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), store_barriers.data());
 }
 
 void brx_pal_d3d12_graphics_command_buffer::build_intermediate_bottom_level_acceleration_structure(brx_pal_intermediate_bottom_level_acceleration_structure *wrapped_intermediate_bottom_level_acceleration_structure, uint32_t bottom_level_acceleration_structure_geometry_count, BRX_PAL_BOTTOM_LEVEL_ACCELERATION_STRUCTURE_GEOMETRY const *wrapped_bottom_level_acceleration_structure_geometries, brx_pal_scratch_buffer *wrapped_scratch_buffer)
@@ -1149,12 +1159,6 @@ void brx_pal_d3d12_graphics_command_buffer::update_top_level_acceleration_struct
     this->m_command_list->ResourceBarrier(1U, &store_barrier);
 }
 
-void brx_pal_d3d12_graphics_command_buffer::end()
-{
-    HRESULT const hr_close = this->m_command_list->Close();
-    assert(SUCCEEDED(hr_close));
-}
-
 brx_pal_d3d12_upload_command_buffer::brx_pal_d3d12_upload_command_buffer() : m_command_allocator(NULL), m_command_list(NULL), m_upload_queue_submit_fence(NULL)
 {
 }
@@ -1250,6 +1254,118 @@ void brx_pal_d3d12_upload_command_buffer::begin()
     }
 }
 
+void brx_pal_d3d12_upload_command_buffer::end()
+{
+    if ((!this->m_uma) || this->m_support_ray_tracing)
+    {
+        HRESULT hr_close = this->m_command_list->Close();
+        assert(SUCCEEDED(hr_close));
+    }
+    else
+    {
+        assert(NULL == this->m_command_allocator);
+        assert(NULL == this->m_command_list);
+    }
+}
+
+void brx_pal_d3d12_upload_command_buffer::asset_resource_load_dont_care(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources)
+{
+    if (!this->m_uma)
+    {
+        mcrt_vector<D3D12_RESOURCE_BARRIER> load_barriers(static_cast<size_t>(storage_asset_buffer_count + sampled_asset_image_subresource_count));
+
+        for (uint32_t storage_asset_buffer_index = 0U; storage_asset_buffer_index < storage_asset_buffer_count; ++storage_asset_buffer_index)
+        {
+            ID3D12Resource *const asset_buffer_resource = static_cast<brx_pal_d3d12_storage_asset_buffer const *>(wrapped_storage_asset_buffers[storage_asset_buffer_index])->get_resource();
+
+            load_barriers[storage_asset_buffer_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .Transition = {
+                    asset_buffer_resource,
+                    0U,
+                    D3D12_RESOURCE_STATE_COMMON,
+                    D3D12_RESOURCE_STATE_COPY_DEST}};
+        }
+
+        for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
+        {
+            BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const &sampled_asset_image_subresource = wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index];
+
+            brx_pal_d3d12_sampled_asset_image const *const sampled_asset_image = static_cast<brx_pal_d3d12_sampled_asset_image const *>(sampled_asset_image_subresource.m_sampled_asset_image);
+
+            uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(sampled_asset_image_subresource.m_mip_level, sampled_asset_image_subresource.m_array_layer, 0U, sampled_asset_image->get_mip_levels(), sampled_asset_image->get_array_layers());
+
+            load_barriers[storage_asset_buffer_count + sampled_asset_image_subresource_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .Transition = {
+                    sampled_asset_image->get_resource(),
+                    subresource_index,
+                    D3D12_RESOURCE_STATE_COMMON,
+                    D3D12_RESOURCE_STATE_COPY_DEST}};
+        }
+
+        if (!load_barriers.empty())
+        {
+            this->m_command_list->ResourceBarrier(static_cast<UINT>(load_barriers.size()), load_barriers.data());
+        }
+        else
+        {
+            assert(false);
+        }
+    }
+}
+
+void brx_pal_d3d12_upload_command_buffer::asset_resource_store(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources)
+{
+    if (!this->m_uma)
+    {
+        mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers(static_cast<size_t>(storage_asset_buffer_count + sampled_asset_image_subresource_count));
+
+        for (uint32_t storage_asset_buffer_index = 0U; storage_asset_buffer_index < storage_asset_buffer_count; ++storage_asset_buffer_index)
+        {
+            ID3D12Resource *const asset_buffer_resource = static_cast<brx_pal_d3d12_storage_asset_buffer const *>(wrapped_storage_asset_buffers[storage_asset_buffer_index])->get_resource();
+
+            store_barriers[storage_asset_buffer_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .Transition = {
+                    asset_buffer_resource,
+                    0U,
+                    D3D12_RESOURCE_STATE_COPY_DEST,
+                    D3D12_RESOURCE_STATE_COMMON}};
+        }
+
+        for (uint32_t sampled_asset_image_subresource_index = 0U; sampled_asset_image_subresource_index < sampled_asset_image_subresource_count; ++sampled_asset_image_subresource_index)
+        {
+            BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const &sampled_asset_image_subresource = wrapped_sampled_asset_image_subresources[sampled_asset_image_subresource_index];
+
+            brx_pal_d3d12_sampled_asset_image const *const sampled_asset_image = static_cast<brx_pal_d3d12_sampled_asset_image const *>(sampled_asset_image_subresource.m_sampled_asset_image);
+
+            uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(sampled_asset_image_subresource.m_mip_level, sampled_asset_image_subresource.m_array_layer, 0U, sampled_asset_image->get_mip_levels(), sampled_asset_image->get_array_layers());
+
+            store_barriers[storage_asset_buffer_count + sampled_asset_image_subresource_index] = D3D12_RESOURCE_BARRIER{
+                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                .Transition = {
+                    sampled_asset_image->get_resource(),
+                    subresource_index,
+                    D3D12_RESOURCE_STATE_COPY_DEST,
+                    D3D12_RESOURCE_STATE_COMMON}};
+        }
+
+        if (!store_barriers.empty())
+        {
+            this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), store_barriers.data());
+        }
+        else
+        {
+            assert(false);
+        }
+    }
+}
+
 void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_storage_asset_buffer(brx_pal_storage_asset_buffer *wrapped_storage_asset_buffer, uint64_t dst_offset, brx_pal_staging_upload_buffer *wrapped_staging_upload_buffer, uint64_t src_offset, uint32_t src_size)
 {
     ID3D12Resource *asset_buffer_resource = static_cast<brx_pal_d3d12_storage_asset_buffer *>(wrapped_storage_asset_buffer)->get_resource();
@@ -1282,10 +1398,18 @@ void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_s
     }
 }
 
-void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_sampled_asset_image(brx_pal_sampled_asset_image *wrapped_sampled_asset_image, BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT wrapped_sampled_asset_image_format, uint32_t sampled_asset_image_width, uint32_t sampled_asset_image_height, uint32_t dst_mip_level, brx_pal_staging_upload_buffer *wrapped_staging_upload_buffer, uint64_t src_offset, uint32_t src_row_pitch, uint32_t src_row_count)
+void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresource, BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT wrapped_sampled_asset_image_format, uint32_t sampled_asset_image_zeroth_width, uint32_t sampled_asset_image_zeroth_height, brx_pal_staging_upload_buffer *wrapped_staging_upload_buffer, uint64_t src_offset, uint32_t src_row_pitch, uint32_t src_row_count)
 {
-    assert(NULL != wrapped_sampled_asset_image);
-    ID3D12Resource *const sampled_asset_image = static_cast<brx_pal_d3d12_sampled_asset_image *>(wrapped_sampled_asset_image)->get_resource();
+    assert(NULL != wrapped_sampled_asset_image_subresource);
+    assert(NULL != wrapped_sampled_asset_image_subresource->m_sampled_asset_image);
+    brx_pal_d3d12_sampled_asset_image const *const sampled_asset_image = static_cast<brx_pal_d3d12_sampled_asset_image const *>(wrapped_sampled_asset_image_subresource->m_sampled_asset_image);
+
+    ID3D12Resource *const sampled_asset_image_resource = sampled_asset_image->get_resource();
+
+    uint32_t const destination_mip_level = wrapped_sampled_asset_image_subresource->m_mip_level;
+    uint32_t const destination_array_layer = wrapped_sampled_asset_image_subresource->m_array_layer;
+
+    uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(destination_mip_level, destination_array_layer, 0U, sampled_asset_image->get_mip_levels(), sampled_asset_image->get_array_layers());
 
     assert(NULL != wrapped_staging_upload_buffer);
     ID3D12Resource *const staging_upload_buffer = static_cast<brx_pal_d3d12_staging_upload_buffer *>(wrapped_staging_upload_buffer)->get_resource();
@@ -1293,11 +1417,20 @@ void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_s
     DXGI_FORMAT unwrapped_sampled_asset_image_format;
     switch (wrapped_sampled_asset_image_format)
     {
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8_UNORM:
+        unwrapped_sampled_asset_image_format = DXGI_FORMAT_R8_UNORM;
+        break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8G8B8A8_UNORM:
         unwrapped_sampled_asset_image_format = DXGI_FORMAT_R8G8B8A8_UNORM;
         break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8G8B8A8_SRGB:
         unwrapped_sampled_asset_image_format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        break;
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16_SFLOAT:
+        unwrapped_sampled_asset_image_format = DXGI_FORMAT_R16_FLOAT;
+        break;
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16_SFLOAT:
+        unwrapped_sampled_asset_image_format = DXGI_FORMAT_R16G16_FLOAT;
         break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16B16A16_SFLOAT:
         unwrapped_sampled_asset_image_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -1316,33 +1449,25 @@ void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_s
     uint32_t const block_width = brx_pal_sampled_asset_image_format_get_block_width(wrapped_sampled_asset_image_format);
     uint32_t const block_height = brx_pal_sampled_asset_image_format_get_block_height(wrapped_sampled_asset_image_format);
 
-    uint32_t image_width = (sampled_asset_image_width >> dst_mip_level);
-    uint32_t image_height = (sampled_asset_image_height >> dst_mip_level);
-    if (0U == image_width)
-    {
-        image_width = 1U;
-    }
-    if (0U == image_height)
-    {
-        image_height = 1U;
-    }
+    uint32_t const image_mip_level_width = std::max(1U, (sampled_asset_image_zeroth_width >> destination_mip_level));
+    uint32_t const image_mip_level_height = std::max(1U, (sampled_asset_image_zeroth_height >> destination_mip_level));
 
-    uint32_t const width = ((image_width + (block_width - 1U)) / block_width) * block_width;
-    uint32_t const height = ((image_height + (block_height - 1U)) / block_height) * block_height;
+    uint32_t const width = ((image_mip_level_width + (block_width - 1U)) / block_width) * block_width;
+    uint32_t const height = ((image_mip_level_height + (block_height - 1U)) / block_height) * block_height;
 
 #ifndef NDEBUG
     {
         ID3D12Device *device = NULL;
-        HRESULT const hr_get_device = sampled_asset_image->GetDevice(IID_PPV_ARGS(&device));
+        HRESULT const hr_get_device = sampled_asset_image_resource->GetDevice(IID_PPV_ARGS(&device));
         assert(SUCCEEDED(hr_get_device));
 
-        D3D12_RESOURCE_DESC const sampled_asset_image_resource_desc = sampled_asset_image->GetDesc();
+        D3D12_RESOURCE_DESC const sampled_asset_image_resource_desc = sampled_asset_image_resource->GetDesc();
 
         // The resulting structures are GPU adapter-agnostic, meaning that the values will not vary from one GPU adapter to the next.
         // This means that we can implement this function by ourselves according to the specification.
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT layouts[1];
         UINT num_rows[1];
-        device->GetCopyableFootprints(&sampled_asset_image_resource_desc, dst_mip_level, 1U, src_offset, layouts, num_rows, NULL, NULL);
+        device->GetCopyableFootprints(&sampled_asset_image_resource_desc, subresource_index, 1U, src_offset, layouts, num_rows, NULL, NULL);
 
         device->Release();
 
@@ -1360,9 +1485,9 @@ void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_s
     {
         {
             D3D12_TEXTURE_COPY_LOCATION const destination = {
-                .pResource = sampled_asset_image,
+                .pResource = sampled_asset_image_resource,
                 .Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-                .SubresourceIndex = dst_mip_level};
+                .SubresourceIndex = subresource_index};
 
             D3D12_TEXTURE_COPY_LOCATION const source = {
                 .pResource = staging_upload_buffer,
@@ -1385,7 +1510,7 @@ void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_s
 
         {
             D3D12_RANGE const read_range = {0U, 0U};
-            HRESULT const hr_map = sampled_asset_image->Map(0U, &read_range, NULL);
+            HRESULT const hr_map = sampled_asset_image_resource->Map(0U, &read_range, NULL);
             assert(SUCCEEDED(hr_map));
         }
 
@@ -1393,33 +1518,65 @@ void brx_pal_d3d12_upload_command_buffer::upload_from_staging_upload_buffer_to_s
 
         // the tiling mode is vendor specific
         // for example,  the AMD addrlib [ac_surface_addr_from_coord](https://gitlab.freedesktop.org/mesa/mesa/-/blob/22.3/src/amd/vulkan/radv_meta_bufimage.c#L1372)
-        sampled_asset_image->WriteToSubresource(dst_mip_level, NULL, reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(staging_upload_buffer_memory_range_base) + src_offset), src_row_pitch, src_row_pitch * src_row_count);
+        sampled_asset_image_resource->WriteToSubresource(subresource_index, NULL, reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(staging_upload_buffer_memory_range_base) + src_offset), src_row_pitch, src_row_pitch * src_row_count);
 
-        sampled_asset_image->Unmap(0U, NULL);
+        sampled_asset_image_resource->Unmap(0U, NULL);
     }
 }
 
-void brx_pal_d3d12_upload_command_buffer::build_non_compacted_bottom_level_acceleration_structure_pass_load(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *wrapped_acceleration_structure_build_input_read_only_buffers)
+void brx_pal_d3d12_upload_command_buffer::acceleration_structure_build_input_read_only_buffer_load(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *wrapped_acceleration_structure_build_input_read_only_buffers)
 {
-    if (!this->m_uma)
+    mcrt_vector<D3D12_RESOURCE_BARRIER> load_barriers(static_cast<size_t>(acceleration_structure_build_input_read_only_buffer_count));
+
+    for (uint32_t acceleration_structure_build_input_read_only_buffer_index = 0U; acceleration_structure_build_input_read_only_buffer_index < acceleration_structure_build_input_read_only_buffer_count; ++acceleration_structure_build_input_read_only_buffer_index)
     {
-        mcrt_vector<D3D12_RESOURCE_BARRIER> load_barriers(static_cast<size_t>(acceleration_structure_build_input_read_only_buffer_count));
+        ID3D12Resource *const unwrapped_acceleration_structure_build_input_read_only_buffer_resource = static_cast<brx_pal_d3d12_acceleration_structure_build_input_read_only_buffer const *>(wrapped_acceleration_structure_build_input_read_only_buffers[acceleration_structure_build_input_read_only_buffer_index])->get_resource();
 
-        for (uint32_t acceleration_structure_build_input_read_only_buffer_index = 0U; acceleration_structure_build_input_read_only_buffer_index < acceleration_structure_build_input_read_only_buffer_count; ++acceleration_structure_build_input_read_only_buffer_index)
-        {
-            ID3D12Resource *const unwrapped_acceleration_structure_build_input_read_only_buffer_resource = static_cast<brx_pal_d3d12_acceleration_structure_build_input_read_only_buffer const *>(wrapped_acceleration_structure_build_input_read_only_buffers[acceleration_structure_build_input_read_only_buffer_index])->get_resource();
+        load_barriers[acceleration_structure_build_input_read_only_buffer_index] = D3D12_RESOURCE_BARRIER{
+            .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            .Transition = {
+                unwrapped_acceleration_structure_build_input_read_only_buffer_resource,
+                0U,
+                D3D12_RESOURCE_STATE_COMMON,
+                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE}};
+    }
 
-            load_barriers[acceleration_structure_build_input_read_only_buffer_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .Transition = {
-                    unwrapped_acceleration_structure_build_input_read_only_buffer_resource,
-                    0U,
-                    D3D12_RESOURCE_STATE_COPY_DEST,
-                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE}};
-        }
-
+    if (!load_barriers.empty())
+    {
         this->m_command_list->ResourceBarrier(static_cast<UINT>(load_barriers.size()), load_barriers.data());
+    }
+    else
+    {
+        assert(false);
+    }
+}
+
+void brx_pal_d3d12_upload_command_buffer::acceleration_structure_build_input_read_only_buffer_store(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *wrapped_acceleration_structure_build_input_read_only_buffers)
+{
+    mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers(static_cast<size_t>(acceleration_structure_build_input_read_only_buffer_count));
+
+    for (uint32_t acceleration_structure_build_input_read_only_buffer_index = 0U; acceleration_structure_build_input_read_only_buffer_index < acceleration_structure_build_input_read_only_buffer_count; ++acceleration_structure_build_input_read_only_buffer_index)
+    {
+        ID3D12Resource *const unwrapped_acceleration_structure_build_input_read_only_buffer_resource = static_cast<brx_pal_d3d12_acceleration_structure_build_input_read_only_buffer const *>(wrapped_acceleration_structure_build_input_read_only_buffers[acceleration_structure_build_input_read_only_buffer_index])->get_resource();
+
+        store_barriers[acceleration_structure_build_input_read_only_buffer_index] = D3D12_RESOURCE_BARRIER{
+            .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+            .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            .Transition = {
+                unwrapped_acceleration_structure_build_input_read_only_buffer_resource,
+                0U,
+                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+                D3D12_RESOURCE_STATE_COMMON}};
+    }
+
+    if (!store_barriers.empty())
+    {
+        this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), store_barriers.data());
+    }
+    else
+    {
+        assert(false);
     }
 }
 
@@ -1516,30 +1673,6 @@ void brx_pal_d3d12_upload_command_buffer::build_non_compacted_bottom_level_accel
     this->m_command_list->BuildRaytracingAccelerationStructure(&ray_tracing_acceleration_structure_desc, 1U, &ray_tracing_acceleration_structure_postbuild_info_desc);
 }
 
-void brx_pal_d3d12_upload_command_buffer::build_non_compacted_bottom_level_acceleration_structure_pass_store(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *wrapped_acceleration_structure_build_input_read_only_buffers)
-{
-    if (!this->m_uma)
-    {
-        mcrt_vector<D3D12_RESOURCE_BARRIER> store_barriers(static_cast<size_t>(acceleration_structure_build_input_read_only_buffer_count));
-
-        for (uint32_t acceleration_structure_build_input_read_only_buffer_index = 0U; acceleration_structure_build_input_read_only_buffer_index < acceleration_structure_build_input_read_only_buffer_count; ++acceleration_structure_build_input_read_only_buffer_index)
-        {
-            ID3D12Resource *const unwrapped_acceleration_structure_build_input_read_only_buffer_resource = static_cast<brx_pal_d3d12_acceleration_structure_build_input_read_only_buffer const *>(wrapped_acceleration_structure_build_input_read_only_buffers[acceleration_structure_build_input_read_only_buffer_index])->get_resource();
-
-            store_barriers[acceleration_structure_build_input_read_only_buffer_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .Transition = {
-                    unwrapped_acceleration_structure_build_input_read_only_buffer_resource,
-                    0U,
-                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-                    D3D12_RESOURCE_STATE_COPY_DEST}};
-        }
-
-        this->m_command_list->ResourceBarrier(static_cast<UINT>(store_barriers.size()), store_barriers.data());
-    }
-}
-
 void brx_pal_d3d12_upload_command_buffer::compact_bottom_level_acceleration_structure(brx_pal_compacted_bottom_level_acceleration_structure *wrapped_destination_compacted_bottom_level_acceleration_structure, brx_pal_non_compacted_bottom_level_acceleration_structure *wrapped_source_non_compacted_bottom_level_acceleration_structure)
 {
     // NOTE: we do NOT need the barrier to synchronize the staging non compacted bottom level acceleration structure, since we already use the fence to wait for the GPU completion to have the size of the compacted acceleration structure.
@@ -1557,67 +1690,22 @@ void brx_pal_d3d12_upload_command_buffer::compact_bottom_level_acceleration_stru
 
 void brx_pal_d3d12_upload_command_buffer::release(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *wrapped_storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *wrapped_sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *wrapped_compacted_bottom_level_acceleration_structures)
 {
-    mcrt_vector<D3D12_RESOURCE_BARRIER> release_barriers(static_cast<size_t>((!this->m_uma) ? (storage_asset_buffer_count + sampled_asset_image_subresource_count + compacted_bottom_level_acceleration_structure_count) : compacted_bottom_level_acceleration_structure_count));
-
-    if (!this->m_uma)
-    {
-        for (uint32_t storage_asset_buffer_index = 0U; storage_asset_buffer_index < storage_asset_buffer_count; ++storage_asset_buffer_index)
-        {
-            ID3D12Resource *const asset_buffer_resource = static_cast<brx_pal_d3d12_storage_asset_buffer const *>(wrapped_storage_asset_buffers[storage_asset_buffer_index])->get_resource();
-
-            release_barriers[storage_asset_buffer_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .Transition = {
-                    asset_buffer_resource,
-                    0U,
-                    D3D12_RESOURCE_STATE_COPY_DEST,
-                    D3D12_RESOURCE_STATE_COMMON}};
-        }
-
-        for (uint32_t sampled_asset_image_index = 0U; sampled_asset_image_index < sampled_asset_image_subresource_count; ++sampled_asset_image_index)
-        {
-            ID3D12Resource *const sampled_asset_image = static_cast<brx_pal_d3d12_sampled_asset_image const *>(wrapped_sampled_asset_image_subresources[sampled_asset_image_index].m_sampled_asset_images)->get_resource();
-
-            release_barriers[storage_asset_buffer_count + sampled_asset_image_index] = D3D12_RESOURCE_BARRIER{
-                .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-                .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-                .Transition = {
-                    sampled_asset_image,
-                    wrapped_sampled_asset_image_subresources[sampled_asset_image_index].m_mip_level,
-                    D3D12_RESOURCE_STATE_COPY_DEST,
-                    D3D12_RESOURCE_STATE_COMMON}};
-        }
-    }
+    mcrt_vector<D3D12_RESOURCE_BARRIER> release_barriers(compacted_bottom_level_acceleration_structure_count);
 
     for (uint32_t compacted_bottom_level_acceleration_structure_index = 0U; compacted_bottom_level_acceleration_structure_index < compacted_bottom_level_acceleration_structure_count; ++compacted_bottom_level_acceleration_structure_index)
     {
         ID3D12Resource *const unwrapped_compacted_bottom_level_acceleration_structure_buffer_resource = static_cast<brx_pal_d3d12_compacted_bottom_level_acceleration_structure const *>(wrapped_compacted_bottom_level_acceleration_structures[compacted_bottom_level_acceleration_structure_index])->get_resource();
 
         // https://microsoft.github.io/DirectX-Specs/d3d/Raytracing.html#synchronizing-acceleration-structure-memory-writesreads
-        release_barriers[(!this->m_uma) ? (storage_asset_buffer_count + sampled_asset_image_subresource_count + compacted_bottom_level_acceleration_structure_index) : compacted_bottom_level_acceleration_structure_index] = D3D12_RESOURCE_BARRIER{
+        release_barriers[compacted_bottom_level_acceleration_structure_index] = D3D12_RESOURCE_BARRIER{
             .Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
             .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
             .UAV = {
                 unwrapped_compacted_bottom_level_acceleration_structure_buffer_resource}};
     }
 
-    if (release_barriers.size() > 0U)
+    if (!release_barriers.empty())
     {
         this->m_command_list->ResourceBarrier(static_cast<UINT>(release_barriers.size()), release_barriers.data());
-    }
-}
-
-void brx_pal_d3d12_upload_command_buffer::end()
-{
-    if ((!this->m_uma) || this->m_support_ray_tracing)
-    {
-        HRESULT hr_close = this->m_command_list->Close();
-        assert(SUCCEEDED(hr_close));
-    }
-    else
-    {
-        assert(NULL == this->m_command_allocator);
-        assert(NULL == this->m_command_list);
     }
 }

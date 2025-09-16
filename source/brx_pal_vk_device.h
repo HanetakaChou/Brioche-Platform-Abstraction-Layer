@@ -188,7 +188,7 @@ private:
     void destroy_storage_image(brx_pal_storage_image *storage_image) const override;
     bool is_sampled_asset_image_compression_bc_supported() const override;
     bool is_sampled_asset_image_compression_astc_supported() const override;
-    brx_pal_sampled_asset_image *create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT sampled_asset_image_format, uint32_t width, uint32_t height, uint32_t mip_levels) const override;
+    brx_pal_sampled_asset_image *create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT sampled_asset_image_format, uint32_t width, uint32_t height, bool array, uint32_t array_layers, uint32_t mip_levels) const override;
     void destroy_sampled_asset_image(brx_pal_sampled_asset_image *sampled_asset_image) const override;
     brx_pal_sampler *create_sampler(BRX_PAL_SAMPLER_FILTER filter, BRX_PAL_SAMPLER_ADDRESS_MODE address_mode) const override;
     void destroy_sampler(brx_pal_sampler *sampler) const override;
@@ -297,23 +297,24 @@ public:
     VkSemaphore get_acquire_next_image_semaphore() const;
     VkSemaphore get_queue_submit_semaphore() const;
     void begin() override;
-    void acquire(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *compacted_bottom_level_acceleration_structures) override;
+    void end() override;
     void begin_debug_utils_label(char const *label_name) override;
     void end_debug_utils_label() override;
+    void acquire(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *compacted_bottom_level_acceleration_structures) override;
     void begin_render_pass(brx_pal_render_pass const *render_pass, brx_pal_frame_buffer const *frame_buffer, uint32_t width, uint32_t height, uint32_t color_clear_value_count, float const (*color_clear_values)[4], float const *depth_clear_value, uint8_t const *stencil_clear_value) override;
+    void end_render_pass() override;
+    void storage_resource_load_dont_care(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
+    void storage_resource_load_load(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
+    void storage_resource_barrier(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
+    void storage_resource_store(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
     void bind_graphics_pipeline(brx_pal_graphics_pipeline const *graphics_pipeline) override;
     void set_view_port(uint32_t width, uint32_t height) override;
     void set_scissor(int32_t offset_width, int32_t offset_height, uint32_t width, uint32_t height) override;
     void bind_graphics_descriptor_sets(brx_pal_pipeline_layout const *pipeline_layout, uint32_t descriptor_set_count, brx_pal_descriptor_set const *const *descriptor_sets, uint32_t dynamic_offet_count, uint32_t const *dynamic_offsets) override;
     void draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) override;
-    void end_render_pass() override;
     void bind_compute_pipeline(brx_pal_compute_pipeline const *compute_pipeline) override;
     void bind_compute_descriptor_sets(brx_pal_pipeline_layout const *pipeline_layout, uint32_t descriptor_set_count, brx_pal_descriptor_set const *const *descriptor_sets, uint32_t dynamic_offet_count, uint32_t const *dynamic_offsets) override;
     void dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z) override;
-    void storage_resource_load_dont_care(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
-    void storage_resource_load_load(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
-    void storage_resource_barrier(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
-    void storage_resource_store(uint32_t storage_buffer_count, brx_pal_storage_buffer const *const *storage_buffers, uint32_t storage_image_count, brx_pal_storage_image const *const *storage_images) override;
     void build_intermediate_bottom_level_acceleration_structure(brx_pal_intermediate_bottom_level_acceleration_structure *intermediate_bottom_level_acceleration_structure, uint32_t bottom_level_acceleration_structure_geometry_count, BRX_PAL_BOTTOM_LEVEL_ACCELERATION_STRUCTURE_GEOMETRY const *bottom_level_acceleration_structure_geometries, brx_pal_scratch_buffer *scratch_buffer) override;
     void build_intermediate_bottom_level_acceleration_structure_store(uint32_t intermediate_bottom_level_acceleration_structure_count, brx_pal_intermediate_bottom_level_acceleration_structure const *const *intermediate_bottom_level_acceleration_structures) override;
     void update_intermediate_bottom_level_acceleration_structure(brx_pal_intermediate_bottom_level_acceleration_structure *intermediate_bottom_level_acceleration_structure, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *bottom_level_acceleration_structure_geometry_vertex_position_buffers, brx_pal_scratch_buffer *scratch_buffer) override;
@@ -322,7 +323,6 @@ public:
     void build_top_level_acceleration_structure_store(brx_pal_top_level_acceleration_structure *top_level_acceleration_structure) override;
     void update_top_level_acceleration_structure(brx_pal_top_level_acceleration_structure *top_level_acceleration_structure, brx_pal_top_level_acceleration_structure_instance_upload_buffer *top_level_acceleration_structure_instance_upload_buffer, brx_pal_scratch_buffer *scratch_buffer) override;
     void update_top_level_acceleration_structure_store(brx_pal_top_level_acceleration_structure *top_level_acceleration_structure) override;
-    void end() override;
 };
 
 class brx_pal_vk_upload_command_buffer final : public brx_pal_upload_command_buffer
@@ -361,14 +361,16 @@ public:
     VkCommandBuffer get_graphics_command_buffer() const;
     VkSemaphore get_upload_queue_submit_semaphore() const;
     void begin() override;
+    void end() override;
+    void asset_resource_load_dont_care(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *sampled_asset_image_subresources) override;
+    void asset_resource_store(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *sampled_asset_image_subresources) override;
     void upload_from_staging_upload_buffer_to_storage_asset_buffer(brx_pal_storage_asset_buffer *storage_asset_buffer, uint64_t dst_offset, brx_pal_staging_upload_buffer *staging_upload_buffer, uint64_t src_offset, uint32_t src_size) override;
-    void upload_from_staging_upload_buffer_to_sampled_asset_image(brx_pal_sampled_asset_image *sampled_asset_image, BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT sampled_asset_image_format, uint32_t sampled_asset_image_width, uint32_t sampled_asset_image_height, uint32_t dst_mip_level, brx_pal_staging_upload_buffer *staging_upload_buffer, uint64_t src_offset, uint32_t src_row_pitch, uint32_t src_row_count) override;
-    void build_non_compacted_bottom_level_acceleration_structure_pass_load(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *acceleration_structure_build_input_read_only_buffers) override;
+    void upload_from_staging_upload_buffer_to_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *sampled_asset_image_subresource, BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT sampled_asset_image_format, uint32_t sampled_asset_image_zeroth_width, uint32_t sampled_asset_image_zeroth_height, brx_pal_staging_upload_buffer *staging_upload_buffer, uint64_t src_offset, uint32_t src_row_pitch, uint32_t src_row_count) override;
+    void acceleration_structure_build_input_read_only_buffer_load(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *acceleration_structure_build_input_read_only_buffers) override;
+    void acceleration_structure_build_input_read_only_buffer_store(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *acceleration_structure_build_input_read_only_buffers) override;
     void build_non_compacted_bottom_level_acceleration_structure(brx_pal_non_compacted_bottom_level_acceleration_structure *non_compacted_bottom_level_acceleration_structure, uint32_t bottom_level_acceleration_structure_geometry_count, BRX_PAL_BOTTOM_LEVEL_ACCELERATION_STRUCTURE_GEOMETRY const *bottom_level_acceleration_structure_geometries, brx_pal_scratch_buffer *scratch_buffer, brx_pal_compacted_bottom_level_acceleration_structure_size_query_pool *compacted_bottom_level_acceleration_structure_size_query_pool, uint32_t query_index) override;
-    void build_non_compacted_bottom_level_acceleration_structure_pass_store(uint32_t acceleration_structure_build_input_read_only_buffer_count, brx_pal_acceleration_structure_build_input_read_only_buffer const *const *acceleration_structure_build_input_read_only_buffers) override;
     void compact_bottom_level_acceleration_structure(brx_pal_compacted_bottom_level_acceleration_structure *destination_compacted_bottom_level_acceleration_structure, brx_pal_non_compacted_bottom_level_acceleration_structure *source_non_compacted_bottom_level_acceleration_structure) override;
     void release(uint32_t storage_asset_buffer_count, brx_pal_storage_asset_buffer const *const *storage_asset_buffers, uint32_t sampled_asset_image_subresource_count, BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE const *sampled_asset_image_subresources, uint32_t compacted_bottom_level_acceleration_structure_count, brx_pal_compacted_bottom_level_acceleration_structure const *const *compacted_bottom_level_acceleration_structures) override;
-    void end() override;
 };
 
 class brx_pal_vk_fence final : public brx_pal_fence
@@ -673,7 +675,7 @@ class brx_pal_vk_sampled_asset_image final : public brx_pal_sampled_asset_image,
 
 public:
     brx_pal_vk_sampled_asset_image();
-    void init(VkDevice device, PFN_vkCreateImageView pfn_create_image_view, VkAllocationCallbacks const *allocation_callbacks, VmaAllocator memory_allocator, VmaPool sampled_asset_image_memory_pool, VkFormat format, uint32_t width, uint32_t height, uint32_t mip_levels);
+    void init(VkDevice device, PFN_vkCreateImageView pfn_create_image_view, VkAllocationCallbacks const *allocation_callbacks, VmaAllocator memory_allocator, VmaPool sampled_asset_image_memory_pool, VkFormat format, uint32_t width, uint32_t height, bool array, uint32_t array_layers, uint32_t mip_levels);
     void uninit(VkDevice device, PFN_vkDestroyImageView pfn_destroy_image_view, VkAllocationCallbacks const *allocation_callbacks, VmaAllocator memory_allocator);
     ~brx_pal_vk_sampled_asset_image();
     VkImage get_image() const;
@@ -681,7 +683,6 @@ public:
 private:
     VkImageView get_sampled_image_view() const override;
     brx_pal_sampled_image const *get_sampled_image() const override;
-    uint32_t get_mip_levels() const override;
 };
 
 class brx_pal_vk_sampler final : public brx_pal_sampler

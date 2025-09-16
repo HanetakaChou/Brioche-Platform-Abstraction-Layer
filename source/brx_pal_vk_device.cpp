@@ -2934,16 +2934,25 @@ bool brx_pal_vk_device::is_sampled_asset_image_compression_astc_supported() cons
     return this->m_physical_device_feature_texture_compression_ASTC_LDR;
 }
 
-brx_pal_sampled_asset_image *brx_pal_vk_device::create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT wrapped_sampled_asset_image_format, uint32_t width, uint32_t height, uint32_t mip_levels) const
+brx_pal_sampled_asset_image *brx_pal_vk_device::create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT wrapped_sampled_asset_image_format, uint32_t width, uint32_t height, bool array, uint32_t array_layers, uint32_t mip_levels) const
 {
     VkFormat unwrapped_sampled_asset_image_format;
     switch (wrapped_sampled_asset_image_format)
     {
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8_UNORM:
+        unwrapped_sampled_asset_image_format = VK_FORMAT_R8_UNORM;
+        break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8G8B8A8_UNORM:
         unwrapped_sampled_asset_image_format = VK_FORMAT_R8G8B8A8_UNORM;
         break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R8G8B8A8_SRGB:
         unwrapped_sampled_asset_image_format = VK_FORMAT_R8G8B8A8_SRGB;
+        break;
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16_SFLOAT:
+        unwrapped_sampled_asset_image_format = VK_FORMAT_R16_SFLOAT;
+        break;
+    case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16_SFLOAT:
+        unwrapped_sampled_asset_image_format = VK_FORMAT_R16G16_SFLOAT;
         break;
     case BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16B16A16_SFLOAT:
         unwrapped_sampled_asset_image_format = VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -2970,7 +2979,7 @@ brx_pal_sampled_asset_image *brx_pal_vk_device::create_sampled_asset_image(BRX_P
 
     brx_pal_vk_sampled_asset_image *new_brx_pal_sampled_asset_image = new (new_brx_pal_sampled_asset_image_base) brx_pal_vk_sampled_asset_image{};
 
-    new_brx_pal_sampled_asset_image->init(this->m_device, this->m_pfn_create_image_view, this->m_allocation_callbacks, this->m_memory_allocator, this->m_sampled_asset_image_memory_pool, unwrapped_sampled_asset_image_format, width, height, mip_levels);
+    new_brx_pal_sampled_asset_image->init(this->m_device, this->m_pfn_create_image_view, this->m_allocation_callbacks, this->m_memory_allocator, this->m_sampled_asset_image_memory_pool, unwrapped_sampled_asset_image_format, width, height, array, array_layers, mip_levels);
 
     return new_brx_pal_sampled_asset_image;
 }
