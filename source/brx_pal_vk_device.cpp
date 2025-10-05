@@ -2434,6 +2434,9 @@ brx_pal_render_pass *brx_pal_vk_device::create_render_pass(uint32_t color_attach
             case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16_SNORM:
                 attachments_description[color_attachment_index].format = VK_FORMAT_R16G16_SNORM;
                 break;
+            case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT:
+                attachments_description[color_attachment_index].format = VK_FORMAT_R16G16B16A16_SFLOAT;
+                break;
             default:
                 assert(false);
                 attachments_description[color_attachment_index].format = VK_FORMAT_UNDEFINED;

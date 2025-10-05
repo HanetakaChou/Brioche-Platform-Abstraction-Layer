@@ -51,6 +51,9 @@ void brx_pal_vk_color_attachment_intermediate_image::init(VkDevice device, PFN_v
 	case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16_SNORM:
 		format = VK_FORMAT_R16G16_SNORM;
 		break;
+	case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT:
+		format = VK_FORMAT_R16G16B16A16_SFLOAT;
+		break;
 	default:
 		assert(false);
 		format = VK_FORMAT_UNDEFINED;

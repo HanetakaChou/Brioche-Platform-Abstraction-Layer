@@ -53,6 +53,9 @@ void brx_pal_d3d12_color_attachment_intermediate_image::init(ID3D12Device *devic
 	case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16_SNORM:
 		unwrapped_format = DXGI_FORMAT_R16G16_SNORM;
 		break;
+	case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT:
+		unwrapped_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		break;
 	default:
 		assert(false);
 		unwrapped_format = static_cast<DXGI_FORMAT>(-1);

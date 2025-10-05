@@ -184,6 +184,9 @@ void brx_pal_d3d12_graphics_pipeline::init(ID3D12Device *device, brx_pal_render_
 		case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16_SNORM:
 			rtv_formats[color_attachment_index] = DXGI_FORMAT_R16G16_SNORM;
 			break;
+		case BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT:
+			rtv_formats[color_attachment_index] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+			break;
 		default:
 			assert(false);
 			rtv_formats[color_attachment_index] = static_cast<DXGI_FORMAT>(-1);
