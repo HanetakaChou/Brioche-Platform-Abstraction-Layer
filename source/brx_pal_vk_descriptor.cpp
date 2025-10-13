@@ -26,7 +26,7 @@ brx_pal_vk_descriptor_set_layout::brx_pal_vk_descriptor_set_layout()
       m_sampler_descriptor_count(0U),
       m_storage_image_descriptor_count(0U),
       m_top_level_acceleration_structure_descriptor_count(0U),
-      m_unbounded_descriptor_type(static_cast<VkDescriptorType>(-1))
+      m_unbounded_descriptor_type(VK_DESCRIPTOR_TYPE_MAX_ENUM)
 {
 }
 
@@ -77,7 +77,7 @@ void brx_pal_vk_descriptor_set_layout::init(uint32_t support_ray_tracing, uint32
                 assert(max_per_stage_descriptor_storage_buffers > max_other_bounded_storage_buffers);
                 assert(max_descriptor_set_storage_buffers > max_other_bounded_storage_buffers);
                 descriptor_set_bindings[binding_index].descriptorCount = std::min(max_per_stage_descriptor_storage_buffers, max_descriptor_set_storage_buffers) - max_other_bounded_storage_buffers;
-                assert(static_cast<VkDescriptorType>(-1) == this->m_unbounded_descriptor_type);
+                assert(VK_DESCRIPTOR_TYPE_MAX_ENUM == this->m_unbounded_descriptor_type);
                 this->m_unbounded_descriptor_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 binding_flags[binding_index] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
             }
@@ -108,7 +108,7 @@ void brx_pal_vk_descriptor_set_layout::init(uint32_t support_ray_tracing, uint32
                 assert(max_per_stage_descriptor_sampled_images > max_other_bounded_sampled_images);
                 assert(max_descriptor_set_sampled_images > max_other_bounded_sampled_images);
                 descriptor_set_bindings[binding_index].descriptorCount = std::min(max_per_stage_descriptor_sampled_images, max_descriptor_set_sampled_images) - max_other_bounded_sampled_images;
-                assert(static_cast<VkDescriptorType>(-1) == this->m_unbounded_descriptor_type);
+                assert(VK_DESCRIPTOR_TYPE_MAX_ENUM == this->m_unbounded_descriptor_type);
                 this->m_unbounded_descriptor_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 binding_flags[binding_index] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
             }
@@ -145,7 +145,7 @@ void brx_pal_vk_descriptor_set_layout::init(uint32_t support_ray_tracing, uint32
         default:
         {
             assert(false);
-            descriptor_set_bindings[binding_index].descriptorType = static_cast<VkDescriptorType>(-1);
+            descriptor_set_bindings[binding_index].descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
             descriptor_set_bindings[binding_index].descriptorCount = static_cast<uint32_t>(-1);
             binding_flags[binding_index] = static_cast<uint32_t>(-1);
         }
@@ -291,7 +291,7 @@ void brx_pal_vk_descriptor_set::init(bool support_ray_tracing, brx_pal_descripto
             has_unbounded_descriptor = true;
         }
         break;
-        case (static_cast<VkDescriptorType>(-1)):
+        case (VK_DESCRIPTOR_TYPE_MAX_ENUM):
         {
             assert(0U == unbounded_descriptor_count);
             has_unbounded_descriptor = false;
@@ -306,7 +306,7 @@ void brx_pal_vk_descriptor_set::init(bool support_ray_tracing, brx_pal_descripto
     }
     else
     {
-        assert(static_cast<VkDescriptorType>(-1) == unwrapped_descriptor_set_layout->get_unbounded_descriptor_type());
+        assert(VK_DESCRIPTOR_TYPE_MAX_ENUM == unwrapped_descriptor_set_layout->get_unbounded_descriptor_type());
         has_unbounded_descriptor = false;
     }
 
@@ -598,7 +598,7 @@ void brx_pal_vk_descriptor_set::write_descriptor(PFN_vkGetDeviceProcAddr pfn_get
     default:
     {
         assert(false);
-        descriptor_write.descriptorType = static_cast<VkDescriptorType>(-1);
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
         descriptor_write.pImageInfo = NULL;
         descriptor_write.pBufferInfo = NULL;
         descriptor_write.pTexelBufferView = NULL;

@@ -21,6 +21,8 @@
 
 #if defined(__linux__)
 
+#include <dlfcn.h>
+
 extern brx_pal_device *brx_pal_create_vk_device(void *wsi_connection, bool support_ray_tracing);
 
 extern void brx_pal_destroy_vk_device(brx_pal_device *wrapped_device);

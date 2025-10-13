@@ -161,7 +161,7 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
 
     assert(NULL == this->m_allocation_callbacks);
 
-    uint32_t const vulkan_api_version = VK_API_VERSION_1_0;
+    uint32_t const vulkan_api_version = VK_API_VERSION_1_1;
 
     assert(VK_NULL_HANDLE == this->m_instance);
     {
