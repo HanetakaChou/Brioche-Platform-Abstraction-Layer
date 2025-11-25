@@ -58,7 +58,7 @@ brx_pal_d3d12_pipeline_set_descriptor_heap const *brx_pal_d3d12_descriptor_alloc
 		pipeline_set.m_descriptor_sets[descriptor_set_index] = static_cast<brx_pal_d3d12_descriptor_set const *>(wrapped_descriptor_sets[descriptor_set_index]);
 	}
 
-	auto const &found_pipeline_set_descriptor_heap = this->m_pipeline_sets_descriptor_heap.find(pipeline_set);
+	auto const found_pipeline_set_descriptor_heap = this->m_pipeline_sets_descriptor_heap.find(pipeline_set);
 	if (this->m_pipeline_sets_descriptor_heap.end() != found_pipeline_set_descriptor_heap)
 	{
 		return &found_pipeline_set_descriptor_heap->second;

@@ -101,23 +101,31 @@ void brx_pal_d3d12_graphics_pipeline::init(ID3D12Device *device, brx_pal_render_
 		}
 	}
 	break;
-	case BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER:
+	case BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST:
+	case BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND:
 	{
+		uint32_t const operation_over_attachment_count = (BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST == wrapped_blend_operation) ? 1U : ((BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND == wrapped_blend_operation) ? 2U : 0U);
+
+		assert(color_attachment_count >= operation_over_attachment_count);
+
 		blend_state.AlphaToCoverageEnable = FALSE;
-		blend_state.IndependentBlendEnable = (1U == color_attachment_count) ? FALSE : TRUE;
+		blend_state.IndependentBlendEnable = (color_attachment_count <= operation_over_attachment_count) ? FALSE : TRUE;
 
-		blend_state.RenderTarget[0].BlendEnable = TRUE;
-		blend_state.RenderTarget[0].LogicOpEnable = FALSE;
-		blend_state.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		blend_state.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-		blend_state.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-		blend_state.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-		blend_state.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-		blend_state.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-		blend_state.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
-		blend_state.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE | D3D12_COLOR_WRITE_ENABLE_ALPHA;
+		for (uint32_t render_target_index = 0U; render_target_index < operation_over_attachment_count; ++render_target_index)
+		{
+			blend_state.RenderTarget[render_target_index].BlendEnable = TRUE;
+			blend_state.RenderTarget[render_target_index].LogicOpEnable = FALSE;
+			blend_state.RenderTarget[render_target_index].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+			blend_state.RenderTarget[render_target_index].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+			blend_state.RenderTarget[render_target_index].BlendOp = D3D12_BLEND_OP_ADD;
+			blend_state.RenderTarget[render_target_index].SrcBlendAlpha = D3D12_BLEND_ONE;
+			blend_state.RenderTarget[render_target_index].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+			blend_state.RenderTarget[render_target_index].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			blend_state.RenderTarget[render_target_index].LogicOp = D3D12_LOGIC_OP_NOOP;
+			blend_state.RenderTarget[render_target_index].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE | D3D12_COLOR_WRITE_ENABLE_ALPHA;
+		}
 
-		for (uint32_t render_target_index = 1U; render_target_index < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++render_target_index)
+		for (uint32_t render_target_index = operation_over_attachment_count; render_target_index < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++render_target_index)
 		{
 			blend_state.RenderTarget[render_target_index].BlendEnable = FALSE;
 			blend_state.RenderTarget[render_target_index].LogicOpEnable = FALSE;

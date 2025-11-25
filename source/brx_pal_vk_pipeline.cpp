@@ -235,19 +235,27 @@ void brx_pal_vk_graphics_pipeline::init(PFN_vkGetDeviceProcAddr pfn_get_device_p
 		}
 	}
 	break;
-	case BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER:
+	case BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST:
+	case BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND:
 	{
-		attachments[0] = VkPipelineColorBlendAttachmentState{
-			VK_TRUE,
-			VK_BLEND_FACTOR_SRC_ALPHA,
-			VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ONE,
-			VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			VK_BLEND_OP_ADD,
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
+		uint32_t const operation_over_attachment_count = (BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST == wrapped_blend_operation) ? 1U : ((BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND == wrapped_blend_operation) ? 2U : 0U);
 
-		for (uint32_t color_attachment_index = 1U; color_attachment_index < color_attachment_count; ++color_attachment_index)
+		assert(color_attachment_count >= operation_over_attachment_count);
+
+		for (uint32_t render_target_index = 0U; render_target_index < operation_over_attachment_count; ++render_target_index)
+		{
+			attachments[render_target_index] = VkPipelineColorBlendAttachmentState{
+				VK_TRUE,
+				VK_BLEND_FACTOR_SRC_ALPHA,
+				VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+				VK_BLEND_OP_ADD,
+				VK_BLEND_FACTOR_ONE,
+				VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+				VK_BLEND_OP_ADD,
+				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
+		}
+
+		for (uint32_t color_attachment_index = operation_over_attachment_count; color_attachment_index < color_attachment_count; ++color_attachment_index)
 		{
 			attachments[color_attachment_index] = VkPipelineColorBlendAttachmentState{
 				VK_FALSE,
