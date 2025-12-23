@@ -50,6 +50,12 @@ void brx_pal_d3d12_graphics_pipeline::init(ID3D12Device *device, brx_pal_render_
 			depth_stencil_state.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
 		}
 		break;
+		case BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER_EQUAL:
+		{
+			depth_stencil_state.DepthEnable = TRUE;
+			depth_stencil_state.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+		}
+		break;
 		case BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_LESS:
 		{
 			depth_stencil_state.DepthEnable = TRUE;

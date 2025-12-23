@@ -187,6 +187,12 @@ void brx_pal_vk_graphics_pipeline::init(PFN_vkGetDeviceProcAddr pfn_get_device_p
 		depth_compare_op = VK_COMPARE_OP_GREATER;
 	}
 	break;
+	case BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER_EQUAL:
+	{
+		depth_test_enable = VK_TRUE;
+		depth_compare_op = VK_COMPARE_OP_GREATER_OR_EQUAL;
+	}
+	break;
 	case BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_LESS:
 	{
 		depth_test_enable = VK_TRUE;
