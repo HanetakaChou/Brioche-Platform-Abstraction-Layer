@@ -14,3 +14,7 @@
 	path = thirdparty/VulkanMemoryAllocator
 	url = git@github.com:HanetakaChou/VulkanMemoryAllocator.git
 	branch = master
+[submodule "thirdparty/MoltenVK"]
+	path = thirdparty/MoltenVK
+	url = git@github.com:HanetakaChou/MoltenVK.git
+	branch = master

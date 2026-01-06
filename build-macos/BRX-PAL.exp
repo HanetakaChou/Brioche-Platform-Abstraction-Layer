@@ -15,10 +15,5 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-# https://developer.android.com/ndk/guides/application_mk
-
-NDK_TOOLCHAIN_VERSION := clang
-# APP_ABI := x86_64 x86 arm64-v8a armeabi-v7a
-# APP_DEBUG:= true
-# APP_PLATFORM := android-28
-# APP_STL := c++_static
+_brx_pal_create_device
+_brx_pal_destroy_device
