@@ -35,6 +35,8 @@ void brx_pal_vk_surface::init(
     PFN_vkCreateAndroidSurfaceKHR pfn_create_android_surface,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     PFN_vkCreateXcbSurfaceKHR pfn_create_xcb_surface,
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    PFN_vkCreateMetalSurfaceEXT pfn_create_metal_surface,
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
     PFN_vkCreateWin32SurfaceKHR pfn_create_win32_surface,
 #else
@@ -87,6 +89,21 @@ void brx_pal_vk_surface::init(
             hWnd};
         VkResult res_create_win32_surface = pfn_create_win32_surface(instance, &win32_surface_create_info, allocation_callbacks, &this->m_surface);
         assert(VK_SUCCESS == res_create_win32_surface);
+    }
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    {
+        extern void *internal_view_layer(void *void_view);
+
+        void *ca_metal_layer = internal_view_layer(wsi_window);
+
+        VkMetalSurfaceCreateInfoEXT const metal_surface_create_info = {
+            VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT,
+            NULL,
+            0U,
+            ca_metal_layer};
+
+        VkResult res_create_metal_surface = pfn_create_metal_surface(instance, &metal_surface_create_info, allocation_callbacks, &this->m_surface);
+        assert(VK_SUCCESS == res_create_metal_surface);
     }
 #else
 #error Unknown Platform

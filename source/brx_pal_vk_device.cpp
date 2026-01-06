@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright (C) YuqiaoZhang(HanetakaChou)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,8 +29,12 @@
 #endif
 #else
 #ifndef NDEBUG
-#include <stdio.h>
+#include <cstdio>
 #endif
+#endif
+#elif defined(__MACH__)
+#ifndef NDEBUG
+#include <cstdio>
 #endif
 #else
 #error Unknown Platform
@@ -50,8 +54,14 @@ extern VkPipelineStageFlags const g_graphics_queue_family_ray_tracing_pipeline_s
 
 extern VkPipelineStageFlags const g_graphics_queue_family_acceleration_structure_build_shader_read_stages = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
 
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
 static VkBool32 VKAPI_PTR _internal_debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
+#else
+// No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
 
 static inline uint32_t _internal_find_lowest_memory_type_index(struct VkPhysicalDeviceMemoryProperties const *physical_device_memory_properties, VkDeviceSize memory_requirements_size, uint32_t memory_requirements_memory_type_bits, VkMemoryPropertyFlags required_property_flags);
@@ -75,8 +85,14 @@ brx_pal_vk_device::brx_pal_vk_device()
       m_support_ray_tracing(false),
       m_allocation_callbacks(NULL),
       m_instance(VK_NULL_HANDLE),
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
       m_message(VK_NULL_HANDLE),
+#else
+// No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
       m_physical_device(VK_NULL_HANDLE),
       m_min_uniform_buffer_offset_alignment(static_cast<uint32_t>(-1)),
@@ -140,6 +156,9 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
 #if defined(__linux__)
     assert(NULL == this->m_pfn_get_instance_proc_addr);
     this->m_pfn_get_instance_proc_addr = vkGetInstanceProcAddr;
+#elif defined(__MACH__)
+    assert(NULL == this->m_pfn_get_instance_proc_addr);
+    this->m_pfn_get_instance_proc_addr = vkGetInstanceProcAddr;
 #else
 #error Unknown Platform
 #endif
@@ -161,7 +180,7 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
 
     assert(NULL == this->m_allocation_callbacks);
 
-    uint32_t const vulkan_api_version = VK_API_VERSION_1_1;
+    uint32_t const vulkan_api_version = VK_API_VERSION_1_0;
 
     assert(VK_NULL_HANDLE == this->m_instance);
     {
@@ -177,14 +196,26 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
             0,
             vulkan_api_version};
 
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
         char const *const enabled_layer_names[] = {
             "VK_LAYER_KHRONOS_validation"};
+#else
+        // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
 
         char const *const enabled_extension_names[] = {
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#else
+        // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
             VK_KHR_SURFACE_EXTENSION_NAME,
 #if defined(__GNUC__)
@@ -194,6 +225,8 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
 #else
             VK_KHR_XCB_SURFACE_EXTENSION_NAME,
 #endif
+#elif defined(__MACH__)
+            VK_EXT_METAL_SURFACE_EXTENSION_NAME,
 #else
 #error Unknown Platform
 #endif
@@ -209,12 +242,16 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
             NULL,
             0U,
             &application_info,
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
             sizeof(enabled_layer_names) / sizeof(enabled_layer_names[0]),
             enabled_layer_names,
 #else
             0U,
             NULL,
+#endif
+#else
+#error "0 or 1"
 #endif
             sizeof(enabled_extension_names) / sizeof(enabled_extension_names[0]),
             enabled_extension_names};
@@ -227,7 +264,8 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
     this->m_pfn_get_instance_proc_addr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkGetInstanceProcAddr"));
     assert(NULL != this->m_pfn_get_instance_proc_addr);
 
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
     assert(VK_NULL_HANDLE == this->m_message);
     {
         PFN_vkCreateDebugUtilsMessengerEXT const pfn_create_debug_utils_messenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkCreateDebugUtilsMessengerEXT"));
@@ -246,6 +284,11 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
         VkResult const res_create_debug_utils_messenger = pfn_create_debug_utils_messenger(this->m_instance, &debug_utils_messenger_create_info, this->m_allocation_callbacks, &this->m_message);
         assert(VK_SUCCESS == res_create_debug_utils_messenger);
     }
+#else
+    // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
 
     assert(VK_NULL_HANDLE == this->m_physical_device);
@@ -392,6 +435,8 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
             };
             brx_pal_xcb_connection_T *const brx_pal_xcb_connection = static_cast<brx_pal_xcb_connection_T *>(wsi_connection);
 #endif
+#elif defined(__MACH__)
+            // metal always supported
 #else
 #error Unknown Platform
 #endif
@@ -415,6 +460,8 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
                     pfn_vk_get_physical_device_xcb_presentation_support(this->m_physical_device, queue_family_index, brx_pal_xcb_connection->m_connection, brx_pal_xcb_connection->m_visual_id)
 
 #endif
+#elif defined(__MACH__)
+                    true
 #else
 #error Unknown Platform
 #endif
@@ -595,7 +642,6 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
 
         char const *const enabled_extension_names[] = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
             VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
             VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
             VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
@@ -604,7 +650,7 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
             VK_KHR_SPIRV_1_4_EXTENSION_NAME,
             VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME};
 
-        uint32_t const enabled_extension_count = !this->m_support_ray_tracing ? 2U : (sizeof(enabled_extension_names) / sizeof(enabled_extension_names[0]));
+        uint32_t const enabled_extension_count = !this->m_support_ray_tracing ? 1U : (sizeof(enabled_extension_names) / sizeof(enabled_extension_names[0]));
 
         PFN_vkGetPhysicalDeviceFeatures const pfn_get_physical_device_features = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkGetPhysicalDeviceFeatures"));
         assert(NULL != pfn_get_physical_device_features);
@@ -662,8 +708,7 @@ void brx_pal_vk_device::init(void *wsi_connection, bool support_ray_tracing)
             VK_FALSE,
             VK_FALSE,
             VK_FALSE,
-            // Shader Cull Distance
-            VK_TRUE,
+            VK_FALSE,
             VK_FALSE,
             VK_FALSE,
             VK_FALSE,
@@ -1930,8 +1975,14 @@ void brx_pal_vk_device::uninit()
 {
     assert(NULL != this->m_pfn_get_instance_proc_addr);
     assert(VK_NULL_HANDLE != this->m_instance);
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
     assert(VK_NULL_HANDLE != this->m_message);
+#else
+    // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
     assert(NULL != this->m_pfn_get_device_proc_addr);
     assert(VK_NULL_HANDLE != this->m_device);
@@ -2033,11 +2084,17 @@ void brx_pal_vk_device::uninit()
 
     this->m_pfn_get_device_proc_addr = NULL;
 
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
     PFN_vkDestroyDebugUtilsMessengerEXT const pfn_destroy_debug_utils_messenger = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkDestroyDebugUtilsMessengerEXT"));
     assert(NULL != pfn_destroy_debug_utils_messenger);
     pfn_destroy_debug_utils_messenger(this->m_instance, this->m_message, this->m_allocation_callbacks);
     this->m_message = VK_NULL_HANDLE;
+#else
+    // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
 
     PFN_vkDestroyInstance pfn_destroy_instance = reinterpret_cast<PFN_vkDestroyInstance>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkDestroyInstance"));
@@ -2052,8 +2109,14 @@ brx_pal_vk_device::~brx_pal_vk_device()
 {
     assert(NULL == this->m_pfn_get_instance_proc_addr);
     assert(VK_NULL_HANDLE == this->m_instance);
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
     assert(VK_NULL_HANDLE == this->m_message);
+#else
+    // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
     assert(NULL == this->m_pfn_get_device_proc_addr);
     assert(VK_NULL_HANDLE == this->m_device);
@@ -3092,6 +3155,9 @@ brx_pal_surface *brx_pal_vk_device::create_surface(void *wsi_window) const
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     PFN_vkCreateXcbSurfaceKHR const pfn_create_xcb_surface = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkCreateXcbSurfaceKHR"));
     assert(NULL != pfn_create_xcb_surface);
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+    PFN_vkCreateMetalSurfaceEXT const pfn_create_metal_surface = reinterpret_cast<PFN_vkCreateMetalSurfaceEXT>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkCreateMetalSurfaceEXT"));
+    assert(NULL != pfn_create_metal_surface);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
     PFN_vkCreateWin32SurfaceKHR const pfn_create_win32_surface = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(this->m_pfn_get_instance_proc_addr(this->m_instance, "vkCreateWin32SurfaceKHR"));
     assert(NULL != pfn_create_win32_surface);
@@ -3114,6 +3180,8 @@ brx_pal_surface *brx_pal_vk_device::create_surface(void *wsi_window) const
         pfn_create_android_surface,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         pfn_create_xcb_surface,
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+        pfn_create_metal_surface,
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
         pfn_create_win32_surface,
 #else
@@ -3616,7 +3684,8 @@ void brx_pal_vk_device::destroy_top_level_acceleration_structure(brx_pal_top_lev
     mcrt_free(delete_unwrapped_top_level_acceleration_structure);
 }
 
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
 static VkBool32 VKAPI_PTR _internal_debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *)
 {
 #if defined(__GNUC__)
@@ -3631,9 +3700,12 @@ static VkBool32 VKAPI_PTR _internal_debug_utils_messenger_callback(VkDebugUtilsM
         __android_log_write(ANDROID_LOG_DEBUG, "Vulkan-Demo", pCallbackData->pMessage);
     }
 #else
-    puts(pCallbackData->pMessage);
-    puts("\n");
+    std::puts(pCallbackData->pMessage);
+    std::puts("\n");
 #endif
+#elif defined(__MACH__)
+    std::puts(pCallbackData->pMessage);
+    std::puts("\n");
 #else
 #error Unknown Platform
 #endif
@@ -3645,6 +3717,11 @@ static VkBool32 VKAPI_PTR _internal_debug_utils_messenger_callback(VkDebugUtilsM
 #endif
     return VK_FALSE;
 }
+#else
+// No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
 
 static inline uint32_t _internal_find_lowest_memory_type_index(struct VkPhysicalDeviceMemoryProperties const *physical_device_memory_properties, VkDeviceSize memory_requirements_size, uint32_t memory_requirements_memory_type_bits, VkMemoryPropertyFlags required_property_flags)

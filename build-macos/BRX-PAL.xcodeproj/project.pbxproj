@@ -1,0 +1,452 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		845CBA322F114A9500457996 /* brx_pal_vk_view_layer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 845CBA312F114A9500457996 /* brx_pal_vk_view_layer.mm */; };
+		84D7F4182F0FE80800FA6577 /* brx_pal_vk_sampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4152F0FE80800FA6577 /* brx_pal_vk_sampler.cpp */; };
+		84D7F4192F0FE80800FA6577 /* brx_pal_vk_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F40B2F0FE80800FA6577 /* brx_pal_vk_buffer.cpp */; };
+		84D7F41A2F0FE80800FA6577 /* brx_pal_vk_fence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F40F2F0FE80800FA6577 /* brx_pal_vk_fence.cpp */; };
+		84D7F41B2F0FE80800FA6577 /* brx_pal_vk_swap_chain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4162F0FE80800FA6577 /* brx_pal_vk_swap_chain.cpp */; };
+		84D7F41C2F0FE80800FA6577 /* brx_pal_vk_device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F40E2F0FE80800FA6577 /* brx_pal_vk_device.cpp */; };
+		84D7F41D2F0FE80800FA6577 /* brx_pal_vk_queue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4132F0FE80800FA6577 /* brx_pal_vk_queue.cpp */; };
+		84D7F41E2F0FE80800FA6577 /* brx_pal_vk_pipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4122F0FE80800FA6577 /* brx_pal_vk_pipeline.cpp */; };
+		84D7F41F2F0FE80800FA6577 /* brx_pal_vk_frame_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4102F0FE80800FA6577 /* brx_pal_vk_frame_buffer.cpp */; };
+		84D7F4202F0FE80800FA6577 /* brx_pal_vk_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4112F0FE80800FA6577 /* brx_pal_vk_image.cpp */; };
+		84D7F4212F0FE80800FA6577 /* brx_pal_device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F40A2F0FE80800FA6577 /* brx_pal_device.cpp */; };
+		84D7F4222F0FE80800FA6577 /* brx_pal_vk_render_pass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4142F0FE80800FA6577 /* brx_pal_vk_render_pass.cpp */; };
+		84D7F4232F0FE80800FA6577 /* brx_pal_vk_vma.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F4172F0FE80800FA6577 /* brx_pal_vk_vma.cpp */; };
+		84D7F4242F0FE80800FA6577 /* brx_pal_vk_descriptor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F40D2F0FE80800FA6577 /* brx_pal_vk_descriptor.cpp */; };
+		84D7F4252F0FE80800FA6577 /* brx_pal_vk_command_buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84D7F40C2F0FE80800FA6577 /* brx_pal_vk_command_buffer.cpp */; };
+		84D7F42B2F0FEE2D00FA6577 /* McRT-Malloc.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84D7F4272F0FEE2000FA6577 /* McRT-Malloc.framework */; };
+		84D7F4342F0FF02200FA6577 /* MoltenVK.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84D7F4332F0FF02200FA6577 /* MoltenVK.xcframework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		845CBA312F114A9500457996 /* brx_pal_vk_view_layer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = brx_pal_vk_view_layer.mm; path = ../source/brx_pal_vk_view_layer.mm; sourceTree = SOURCE_ROOT; };
+		84D7F4022F0FE3F700FA6577 /* BRX-PAL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "BRX-PAL.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		84D7F40A2F0FE80800FA6577 /* brx_pal_device.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_device.cpp; path = ../source/brx_pal_device.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F40B2F0FE80800FA6577 /* brx_pal_vk_buffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_buffer.cpp; path = ../source/brx_pal_vk_buffer.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F40C2F0FE80800FA6577 /* brx_pal_vk_command_buffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_command_buffer.cpp; path = ../source/brx_pal_vk_command_buffer.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F40D2F0FE80800FA6577 /* brx_pal_vk_descriptor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_descriptor.cpp; path = ../source/brx_pal_vk_descriptor.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F40E2F0FE80800FA6577 /* brx_pal_vk_device.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_device.cpp; path = ../source/brx_pal_vk_device.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F40F2F0FE80800FA6577 /* brx_pal_vk_fence.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_fence.cpp; path = ../source/brx_pal_vk_fence.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4102F0FE80800FA6577 /* brx_pal_vk_frame_buffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_frame_buffer.cpp; path = ../source/brx_pal_vk_frame_buffer.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4112F0FE80800FA6577 /* brx_pal_vk_image.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_image.cpp; path = ../source/brx_pal_vk_image.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4122F0FE80800FA6577 /* brx_pal_vk_pipeline.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_pipeline.cpp; path = ../source/brx_pal_vk_pipeline.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4132F0FE80800FA6577 /* brx_pal_vk_queue.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_queue.cpp; path = ../source/brx_pal_vk_queue.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4142F0FE80800FA6577 /* brx_pal_vk_render_pass.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_render_pass.cpp; path = ../source/brx_pal_vk_render_pass.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4152F0FE80800FA6577 /* brx_pal_vk_sampler.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_sampler.cpp; path = ../source/brx_pal_vk_sampler.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4162F0FE80800FA6577 /* brx_pal_vk_swap_chain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_swap_chain.cpp; path = ../source/brx_pal_vk_swap_chain.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4172F0FE80800FA6577 /* brx_pal_vk_vma.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_pal_vk_vma.cpp; path = ../source/brx_pal_vk_vma.cpp; sourceTree = SOURCE_ROOT; };
+		84D7F4272F0FEE2000FA6577 /* McRT-Malloc.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = "McRT-Malloc.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		84D7F4332F0FF02200FA6577 /* MoltenVK.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = MoltenVK.xcframework; path = ../thirdparty/MoltenVK/MoltenVK.xcframework; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		84D7F3FF2F0FE3F700FA6577 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				84D7F42B2F0FEE2D00FA6577 /* McRT-Malloc.framework in Frameworks */,
+				84D7F4342F0FF02200FA6577 /* MoltenVK.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		84D7F3E82F0FE28800FA6577 = {
+			isa = PBXGroup;
+			children = (
+				84D7F40A2F0FE80800FA6577 /* brx_pal_device.cpp */,
+				84D7F40B2F0FE80800FA6577 /* brx_pal_vk_buffer.cpp */,
+				84D7F40C2F0FE80800FA6577 /* brx_pal_vk_command_buffer.cpp */,
+				84D7F40D2F0FE80800FA6577 /* brx_pal_vk_descriptor.cpp */,
+				84D7F40E2F0FE80800FA6577 /* brx_pal_vk_device.cpp */,
+				84D7F40F2F0FE80800FA6577 /* brx_pal_vk_fence.cpp */,
+				84D7F4102F0FE80800FA6577 /* brx_pal_vk_frame_buffer.cpp */,
+				84D7F4112F0FE80800FA6577 /* brx_pal_vk_image.cpp */,
+				84D7F4122F0FE80800FA6577 /* brx_pal_vk_pipeline.cpp */,
+				84D7F4132F0FE80800FA6577 /* brx_pal_vk_queue.cpp */,
+				84D7F4142F0FE80800FA6577 /* brx_pal_vk_render_pass.cpp */,
+				84D7F4152F0FE80800FA6577 /* brx_pal_vk_sampler.cpp */,
+				84D7F4162F0FE80800FA6577 /* brx_pal_vk_swap_chain.cpp */,
+				845CBA312F114A9500457996 /* brx_pal_vk_view_layer.mm */,
+				84D7F4172F0FE80800FA6577 /* brx_pal_vk_vma.cpp */,
+				84D7F4262F0FEE2000FA6577 /* Frameworks */,
+				84D7F3F32F0FE28800FA6577 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		84D7F3F32F0FE28800FA6577 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				84D7F4022F0FE3F700FA6577 /* BRX-PAL.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		84D7F4262F0FEE2000FA6577 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				84D7F4332F0FF02200FA6577 /* MoltenVK.xcframework */,
+				84D7F4272F0FEE2000FA6577 /* McRT-Malloc.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		84D7F3FD2F0FE3F700FA6577 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		84D7F4012F0FE3F700FA6577 /* BRX-PAL */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 84D7F4092F0FE3F700FA6577 /* Build configuration list for PBXNativeTarget "BRX-PAL" */;
+			buildPhases = (
+				84D7F3FD2F0FE3F700FA6577 /* Headers */,
+				84D7F3FE2F0FE3F700FA6577 /* Sources */,
+				84D7F3FF2F0FE3F700FA6577 /* Frameworks */,
+				84D7F4002F0FE3F700FA6577 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "BRX-PAL";
+			packageProductDependencies = (
+			);
+			productName = "BRX-PAL";
+			productReference = 84D7F4022F0FE3F700FA6577 /* BRX-PAL.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		84D7F3E92F0FE28800FA6577 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					84D7F4012F0FE3F700FA6577 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+				};
+			};
+			buildConfigurationList = 84D7F3EC2F0FE28800FA6577 /* Build configuration list for PBXProject "BRX-PAL" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 84D7F3E82F0FE28800FA6577;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 84D7F3F32F0FE28800FA6577 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				84D7F4012F0FE3F700FA6577 /* BRX-PAL */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		84D7F4002F0FE3F700FA6577 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		84D7F3FE2F0FE3F700FA6577 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				845CBA322F114A9500457996 /* brx_pal_vk_view_layer.mm in Sources */,
+				84D7F4182F0FE80800FA6577 /* brx_pal_vk_sampler.cpp in Sources */,
+				84D7F4192F0FE80800FA6577 /* brx_pal_vk_buffer.cpp in Sources */,
+				84D7F41A2F0FE80800FA6577 /* brx_pal_vk_fence.cpp in Sources */,
+				84D7F41B2F0FE80800FA6577 /* brx_pal_vk_swap_chain.cpp in Sources */,
+				84D7F41C2F0FE80800FA6577 /* brx_pal_vk_device.cpp in Sources */,
+				84D7F41D2F0FE80800FA6577 /* brx_pal_vk_queue.cpp in Sources */,
+				84D7F41E2F0FE80800FA6577 /* brx_pal_vk_pipeline.cpp in Sources */,
+				84D7F41F2F0FE80800FA6577 /* brx_pal_vk_frame_buffer.cpp in Sources */,
+				84D7F4202F0FE80800FA6577 /* brx_pal_vk_image.cpp in Sources */,
+				84D7F4212F0FE80800FA6577 /* brx_pal_device.cpp in Sources */,
+				84D7F4222F0FE80800FA6577 /* brx_pal_vk_render_pass.cpp in Sources */,
+				84D7F4232F0FE80800FA6577 /* brx_pal_vk_vma.cpp in Sources */,
+				84D7F4242F0FE80800FA6577 /* brx_pal_vk_descriptor.cpp in Sources */,
+				84D7F4252F0FE80800FA6577 /* brx_pal_vk_command_buffer.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		84D7F3FB2F0FE28800FA6577 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = x86_64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEFINES_MODULE = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRIP_INSTALLED_PRODUCT = NO;
+			};
+			name = Debug;
+		};
+		84D7F3FC2F0FE28800FA6577 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = x86_64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = NO;
+				DEPLOYMENT_POSTPROCESSING = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"NDEBUG=1",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRIP_INSTALLED_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		84D7F4062F0FE3F700FA6577 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = x86_64;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEFINES_MODULE = NO;
+				DEPLOYMENT_POSTPROCESSING = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				EXPORTED_SYMBOLS_FILE = "$(PROJECT_DIR)/BRX-PAL.exp";
+				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				"OTHER_CFLAGS[arch=i386]" = (
+					"$(inherited)",
+					"-mf16c",
+					"-mfma",
+				);
+				"OTHER_CFLAGS[arch=x86_64]" = (
+					"$(inherited)",
+					"-mf16c",
+					"-mfma",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "IO.GitHub.BriochePuppet.BRX-PAL";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
+			};
+			name = Debug;
+		};
+		84D7F4072F0FE3F700FA6577 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = x86_64;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx2;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = YES;
+				DEFINES_MODULE = NO;
+				DEPLOYMENT_POSTPROCESSING = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				EXPORTED_SYMBOLS_FILE = "$(PROJECT_DIR)/BRX-PAL.exp";
+				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				"OTHER_CFLAGS[arch=i386]" = (
+					"$(inherited)",
+					"-mf16c",
+					"-mfma",
+				);
+				"OTHER_CFLAGS[arch=x86_64]" = (
+					"$(inherited)",
+					"-mf16c",
+					"-mfma",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "IO.GitHub.BriochePuppet.BRX-PAL";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRIP_INSTALLED_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		84D7F3EC2F0FE28800FA6577 /* Build configuration list for PBXProject "BRX-PAL" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				84D7F3FB2F0FE28800FA6577 /* Debug */,
+				84D7F3FC2F0FE28800FA6577 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		84D7F4092F0FE3F700FA6577 /* Build configuration list for PBXNativeTarget "BRX-PAL" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				84D7F4062F0FE3F700FA6577 /* Debug */,
+				84D7F4072F0FE3F700FA6577 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 84D7F3E92F0FE28800FA6577 /* Project object */;
+}

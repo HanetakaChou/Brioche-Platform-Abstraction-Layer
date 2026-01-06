@@ -24,9 +24,22 @@
 #if defined(__linux__)
 #if defined(__ANDROID__)
 #define VK_USE_PLATFORM_ANDROID_KHR 1
+#ifndef NDEBUG
+#define ENABLE_VULKAN_VALIDATION_LAYER 1
+#else
+#define ENABLE_VULKAN_VALIDATION_LAYER 0
+#endif
 #else
 #define VK_USE_PLATFORM_XCB_KHR 1
+#ifndef NDEBUG
+#define ENABLE_VULKAN_VALIDATION_LAYER 1
+#else
+#define ENABLE_VULKAN_VALIDATION_LAYER 0
 #endif
+#endif
+#elif defined(__MACH__)
+#define VK_USE_PLATFORM_METAL_EXT 1
+#define ENABLE_VULKAN_VALIDATION_LAYER 0
 #else
 #error Unknown Platform
 #endif
@@ -34,6 +47,11 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX 1
 #define VK_USE_PLATFORM_WIN32_KHR 1
+#ifndef NDEBUG
+#define ENABLE_VULKAN_VALIDATION_LAYER 1
+#else
+#define ENABLE_VULKAN_VALIDATION_LAYER 0
+#endif
 #include <sdkddkver.h>
 #include <windows.h>
 #else
@@ -50,6 +68,7 @@
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
+
 extern VkPipelineStageFlags const g_graphics_queue_family_graphics_compute_pipeline_shader_write_stages;
 extern VkPipelineStageFlags const g_graphics_queue_family_graphics_compute_pipeline_shader_read_stages;
 extern VkPipelineStageFlags const g_graphics_queue_family_ray_tracing_pipeline_shader_read_stages;
@@ -65,8 +84,14 @@ class brx_pal_vk_device final : public brx_pal_device
 
     VkInstance m_instance;
 
-#ifndef NDEBUG
+#if defined(ENABLE_VULKAN_VALIDATION_LAYER)
+#if ENABLE_VULKAN_VALIDATION_LAYER
     VkDebugUtilsMessengerEXT m_message;
+#else
+    // No Validation Layer
+#endif
+#else
+#error "0 or 1"
 #endif
 
     VkPhysicalDevice m_physical_device;
@@ -710,6 +735,8 @@ public:
         PFN_vkCreateAndroidSurfaceKHR pfn_create_android_surface,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         PFN_vkCreateXcbSurfaceKHR pfn_create_xcb_surface,
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+        PFN_vkCreateMetalSurfaceEXT pfn_create_metal_surface,
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
         PFN_vkCreateWin32SurfaceKHR pfn_create_win32_surface,
 #else

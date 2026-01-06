@@ -21,7 +21,21 @@
 
 #if defined(__linux__)
 
-#include <dlfcn.h>
+extern brx_pal_device *brx_pal_create_vk_device(void *wsi_connection, bool support_ray_tracing);
+
+extern void brx_pal_destroy_vk_device(brx_pal_device *wrapped_device);
+
+extern "C" brx_pal_device *brx_pal_create_device(void *wsi_connection, bool support_ray_tracing)
+{
+    return brx_pal_create_vk_device(wsi_connection, support_ray_tracing);
+}
+
+extern "C" void brx_pal_destroy_device(brx_pal_device *wrapped_device)
+{
+    return brx_pal_destroy_vk_device(wrapped_device);
+}
+
+#elif defined(__MACH__)
 
 extern brx_pal_device *brx_pal_create_vk_device(void *wsi_connection, bool support_ray_tracing);
 
@@ -58,14 +72,13 @@ extern void brx_pal_destroy_vk_device(brx_pal_device *wrapped_device);
 
 extern "C" brx_pal_device *brx_pal_create_device(void *wsi_connection, bool support_ray_tracing)
 {
-    // we can always assume Direct3D is supported better than vulkan on windows
-    if ((NULL != LoadLibraryW(L"D3D12.dll")) && (NULL != LoadLibraryW(L"DXGI.dll")))
-    {
-        return brx_pal_create_d3d12_device(wsi_connection, support_ray_tracing);
-    }
-    else if (NULL != LoadLibraryW(L"vulkan-1.dll"))
+    if (NULL != LoadLibraryW(L"vulkan-1.dll"))
     {
         return brx_pal_create_vk_device(wsi_connection, support_ray_tracing);
+    }
+    else if ((NULL != LoadLibraryW(L"D3D12.dll")) && (NULL != LoadLibraryW(L"DXGI.dll")))
+    {
+        return brx_pal_create_d3d12_device(wsi_connection, support_ray_tracing);
     }
     else
     {

@@ -110,17 +110,11 @@ void brx_pal_vk_graphics_pipeline::init(PFN_vkGetDeviceProcAddr pfn_get_device_p
 		1U,
 		NULL};
 
-	VkPipelineRasterizationDepthClipStateCreateInfoEXT const rasterization_state_depth_clip_state = {
-		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT,
-		NULL,
-		0U,
-		enable_depth_clip ? VK_TRUE : VK_FALSE};
-
 	VkPipelineRasterizationStateCreateInfo const rasterization_state = {
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		&rasterization_state_depth_clip_state,
+		NULL,
 		0U,
-		VK_FALSE,
+		enable_depth_clip ? VK_FALSE : VK_TRUE,
 		VK_FALSE,
 		VK_POLYGON_MODE_FILL,
 		enable_back_face_cull ? static_cast<VkCullModeFlags>(VK_CULL_MODE_BACK_BIT) : static_cast<VkCullModeFlags>(VK_CULL_MODE_NONE),
